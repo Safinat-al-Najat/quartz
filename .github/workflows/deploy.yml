@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - v4
+  repository_dispatch:
+    types: [obsidian_update]
   workflow_dispatch:
 
 permissions:
