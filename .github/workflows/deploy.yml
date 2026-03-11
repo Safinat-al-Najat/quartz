@@ -3,9 +3,9 @@ name: Deploy Quartz site to GitHub Pages
 on:
   push:
     branches:
-      - v4
+      - main
   repository_dispatch:
-    types: [obsidian_update]
+    types: [notes_updated]
   workflow_dispatch:
 
 permissions:
