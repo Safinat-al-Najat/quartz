@@ -71,3 +71,8 @@ html {
 .reader-mode-button {
   display: none !important;
 }
+
+/* Hide the title only on the homepage */
+[data-slug="index"] .article-title {
+  display: none;
+}
