@@ -67,12 +67,20 @@ html {
   font-weight: bold;
 }
 
-/* Hide the Reader Mode toggle button */
-.reader-mode-button {
+/* 1. Hide the Reader Mode button and its container */
+button#reader-mode, 
+.reader-mode-button,
+[aria-label="Toggle reader mode"] {
   display: none !important;
 }
 
-/* Hide the title only on the homepage */
+/* 2. Hide the Index title on the homepage */
 [data-slug="index"] .article-title {
-  display: none;
+  display: none !important;
+}
+
+/* 3. Hide the Index link in the explorer sidebar */
+.explorer [data-for="index"],
+.explorer a[href$="index"] {
+  display: none !important;
 }
