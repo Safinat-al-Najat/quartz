@@ -36,7 +36,7 @@ left: [
     Component.ReaderMode(),
     Component.DesktopOnly(Component.RecentNotes({
       title: "New Topics",
-      limit: 5,
+      limit: 3,
     })),
     Component.Explorer({
       useSavedState: true,
