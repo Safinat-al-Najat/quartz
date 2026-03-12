@@ -50,13 +50,13 @@ export const defaultContentPageLayout: PageLayout = {
   //   repulsion: 1000, // Higher number = more space between notes
   //   forceStep: 10,
   // },
-  globalGraph: {
-    drag: true,
-    zoom: true,
-    repulsion: 1500,
-    linkDistance: 100, // Length of the lines
-  },
-}),
+//   globalGraph: {
+//     drag: true,
+//     zoom: true,
+//     repulsion: 1500,
+//     linkDistance: 100, // Length of the lines
+//   },
+// }),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
