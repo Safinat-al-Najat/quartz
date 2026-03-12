@@ -78,10 +78,13 @@ export const defaultListPageLayout: PageLayout = {
     Component.Flex({
       components: [
         {
-          Component: Component.Search(),
-          grow: true,
+          Component: Component.Search({
+            enableShortcut: true,
+            placeholder: "Search for a topic...", 
+          }),
         },
         { Component: Component.Darkmode() },
+        { Component: Component.ReaderMode() },
       ],
     }),
     Component.Explorer(),
