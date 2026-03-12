@@ -56,7 +56,7 @@ export const defaultContentPageLayout: PageLayout = {
     repulsion: 1500,
     linkDistance: 100, // Length of the lines
   },
-}),,
+}),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
