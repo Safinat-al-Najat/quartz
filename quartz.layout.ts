@@ -35,7 +35,7 @@ left: [
     Component.Darkmode(),
     Component.ReaderMode(),
     Component.DesktopOnly(Component.RecentNotes({
-      title: "New Lessons",
+      title: "New Topics",
       limit: 5,
     })),
     Component.Explorer({
