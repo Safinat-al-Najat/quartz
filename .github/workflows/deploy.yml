@@ -33,6 +33,7 @@ jobs:
           
           # 2. Clone the notes repo from the ORGANIZATION
           # Make sure GH_TOKEN is a secret in this Quartz repo!
+          # Change 'NAME-OF-YOUR-OBSIDIAN-REPO' to the actual name of your notes repo
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/Safinat-al-Najat/safinat-al-najat.github.io.git temp_vault
           
           # 3. Pull everything out
