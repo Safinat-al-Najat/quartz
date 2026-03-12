@@ -16,7 +16,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "en-US",
-    baseUrl: "muneeb1st.github.io",
+    baseUrl: "safinat-al-najat.github.io",
     useIndexHtml: true,
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",
