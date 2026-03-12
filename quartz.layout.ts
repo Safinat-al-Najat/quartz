@@ -26,27 +26,22 @@ export const defaultContentPageLayout: PageLayout = {
     Component.TagList(),
   ],
 left: [
-  Component.PageTitle(),
-  Component.MobileOnly(Component.Spacer()),
-  Component.Flex({
-    components: [
-      Component.Search({
-        enableShortcut: true,
-        placeholder: "Search for a topic...", 
-      }),
-      Component.Darkmode(),
-      Component.ReaderMode(),
-    ],
-  }),
-  Component.DesktopOnly(Component.RecentNotes({
-    title: "New Lessons",
-    limit: 5,
-  })),
-  Component.Explorer({
-  useSavedState: true,
-  sort: (a, b) => a.displayName.localeCompare(b.displayName),
-}),
-],
+    Component.PageTitle(),
+    Component.MobileOnly(Component.Spacer()),
+    Component.Search({
+      enableShortcut: true,
+      placeholder: "Search for a topic...", 
+    }),
+    Component.Darkmode(),
+    Component.ReaderMode(),
+    Component.DesktopOnly(Component.RecentNotes({
+      title: "New Lessons",
+      limit: 5,
+    })),
+    Component.Explorer({
+      useSavedState: true,
+    }),
+  ],
   right: [
   //   Component.Graph({
   // localGraph: {
@@ -75,18 +70,8 @@ export const defaultListPageLayout: PageLayout = {
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
-    Component.Flex({
-      components: [
-        {
-          Component: Component.Search({
-            enableShortcut: true,
-            placeholder: "Search for a topic...", 
-          }),
-        },
-        { Component: Component.Darkmode() },
-        { Component: Component.ReaderMode() },
-      ],
-    }),
+    Component.Search(),
+    Component.Darkmode(),
     Component.Explorer(),
   ],
   right: [],
