@@ -16,7 +16,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "en-US",
-    baseUrl: "muneeb1st.github.io/quartz",
+    baseUrl: "muneeb1st.github.io",
     useIndexHtml: true,
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",
