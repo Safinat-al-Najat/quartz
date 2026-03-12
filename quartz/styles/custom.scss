@@ -54,3 +54,15 @@ a:hover {
   transform: translateY(-5px);
   background: var(--highlight);
 }
+
+
+/* Friendly Scroll Behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Make sure the active link in the sidebar is very bright */
+.explorer li > a[data-for] {
+  color: var(--secondary);
+  font-weight: bold;
+}
