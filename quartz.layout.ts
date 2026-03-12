@@ -41,7 +41,22 @@ export const defaultContentPageLayout: PageLayout = {
     Component.Explorer(),
   ],
   right: [
-    Component.Graph(),
+    Component.Graph({
+  localGraph: {
+    drag: true, // Let's you move nodes like in Obsidian
+    zoom: true, // Let's you scroll to zoom
+    depth: 1,   // How many steps away to show
+    scale: 1.1,
+    repulsion: 1000, // Higher number = more space between notes
+    forceStep: 10,
+  },
+  globalGraph: {
+    drag: true,
+    zoom: true,
+    repulsion: 1500,
+    linkDistance: 100, // Length of the lines
+  },
+}),,
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
