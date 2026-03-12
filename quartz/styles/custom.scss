@@ -1,3 +1,24 @@
 @use "./base.scss";
 
 // put your custom CSS here!
+
+/* Make everything round and minimalist */
+* {
+  --radius: 15px; /* Adjust this number for more/less roundness */
+}
+
+/* Round the search bar and buttons */
+.search, .button, input, .popover, .backlinks, .toc {
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--lightgray);
+}
+
+/* Minimalist cleanup */
+.graph, .side-segment {
+  display: none !important; /* Extra safety to hide the graph */
+}
+
+/* Round images if you have them */
+img {
+  border-radius: var(--radius);
+}
