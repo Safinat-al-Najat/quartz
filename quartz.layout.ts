@@ -25,21 +25,25 @@ export const defaultContentPageLayout: PageLayout = {
     Component.ContentMeta(),
     Component.TagList(),
   ],
-  left: [
-    Component.PageTitle(),
-    Component.MobileOnly(Component.Spacer()),
-    Component.Flex({
-      components: [
-        {
-          Component: Component.Search(),
-          grow: true,
-        },
-        { Component: Component.Darkmode() },
-        { Component: Component.ReaderMode() },
-      ],
-    }),
-    Component.Explorer(),
-  ],
+left: [
+  Component.PageTitle(),
+  Component.MobileOnly(Component.Spacer()),
+  Component.Flex({
+    components: [
+      Component.Search({
+        enableShortcut: true,
+        placeholder: "Search for a topic...", 
+      }),
+      Component.Darkmode(),
+      Component.ReaderMode(),
+    ],
+  }),
+  Component.DesktopOnly(Component.RecentNotes({
+    title: "New Lessons",
+    limit: 5,
+  })),
+  Component.Explorer(),
+],
   right: [
   //   Component.Graph({
   // localGraph: {
