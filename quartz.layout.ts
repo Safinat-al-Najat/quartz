@@ -42,7 +42,10 @@ left: [
     title: "New Lessons",
     limit: 5,
   })),
-  Component.Explorer(),
+  Component.Explorer({
+  useSavedState: true,
+  sort: (a, b) => a.displayName.localeCompare(b.displayName),
+}),
 ],
   right: [
   //   Component.Graph({
