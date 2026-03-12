@@ -31,18 +31,18 @@ jobs:
           # 1. Clear the content folder
           rm -rf content/*
           
-          # 2. Clone the notes repo
-          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/muneeb1st/obsidian.git temp_vault
+          # 2. Clone the notes repo from the ORGANIZATION
+          # Make sure GH_TOKEN is a secret in this Quartz repo!
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/Safinat-al-Najat/safinat-al-najat.github.io.git temp_vault
           
-          # 3. Pull everything out of the "Extensive Research" folder to the root
-          # This specifically solves the index.md missing issue
+          # 3. Pull everything out
           if [ -d "temp_vault/Extensive Research" ]; then
             cp -r "temp_vault/Extensive Research"/* content/
           else
             cp -r temp_vault/* content/
           fi
           
-          # 4. Safety: Force any variation of "index.md" to be exactly content/index.md
+          # 4. Safety: Force index.md
           find content -maxdepth 2 -iname "index.md" -exec mv {} content/index.md \;
           
           # 5. Cleanup
