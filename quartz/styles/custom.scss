@@ -3,22 +3,29 @@
 // put your custom CSS here!
 
 /* Make everything round and minimalist */
-* {
-  --radius: 15px; /* Adjust this number for more/less roundness */
-}
-
-/* Round the search bar and buttons */
-.search, .button, input, .popover, .backlinks, .toc {
-  border-radius: var(--radius) !important;
+/* Friendly Rounded UI */
+.search, .explorer, .popover, button, input {
+  border-radius: 12px !important;
   border: 1px solid var(--lightgray);
 }
 
-/* Minimalist cleanup */
-.graph, .side-segment {
-  display: none !important; /* Extra safety to hide the graph */
+/* Remove 'techy' clutter */
+.meta, .content-meta {
+  display: none !important;
 }
 
-/* Round images if you have them */
-img {
-  border-radius: var(--radius);
+/* Make text large and readable */
+body {
+  font-size: 18px; /* Bigger default font */
+}
+
+/* Add a nice glow to links so they are easy to see */
+a {
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
 }
