@@ -66,3 +66,8 @@ html {
   color: var(--secondary);
   font-weight: bold;
 }
+
+/* Hide the Reader Mode toggle button */
+.reader-mode-button {
+  display: none !important;
+}
