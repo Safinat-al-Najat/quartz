@@ -19,9 +19,22 @@ interface FolderContentOptions {
   sort?: SortFn
 }
 
+const defaultAlphaSort: SortFn = (a, b) => {
+  // Subfolders (no filePath) come before regular files
+  const aIsFolder = !a.filePath
+  const bIsFolder = !b.filePath
+  if (aIsFolder && !bIsFolder) return -1
+  if (!aIsFolder && bIsFolder) return 1
+  // Both same type — sort A-Z by title
+  const aTitle = a.frontmatter?.title ?? ""
+  const bTitle = b.frontmatter?.title ?? ""
+  return aTitle.localeCompare(bTitle, undefined, { numeric: true, sensitivity: "base" })
+}
+
 const defaultOptions: FolderContentOptions = {
   showFolderCount: true,
   showSubfolders: true,
+  sort: defaultAlphaSort,
 }
 
 export default ((opts?: Partial<FolderContentOptions>) => {
