@@ -25,12 +25,12 @@ export const defaultContentPageLayout: PageLayout = {
     Component.ContentMeta(),
     Component.TagList(),
   ],
-left: [
+  left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
     Component.Search({
       enableShortcut: true,
-      placeholder: "Search for a topic...", 
+      placeholder: "Search for a topic...",
     }),
     Component.Darkmode(),
     Component.ReaderMode(),
@@ -38,33 +38,41 @@ left: [
       title: "New Topics",
       limit: 3,
     })),
-    Component.Explorer({
-      useSavedState: true,
-    }),
+    // Component.Explorer({
+    //   useSavedState: true,
+    //   sortFn: (a, b) => {
+    //     // Folders before files, both sorted alphabetically
+    //     if ((!a.file && !b.file) || (a.file && b.file)) {
+    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true })
+    //     }
+    //     if (a.file && !b.file) return 1
+    //     return -1
+    //   },
+    // }),
   ],
   right: [
-  //   Component.Graph({
-  // localGraph: {
-  //   drag: true, // Let's you move nodes like in Obsidian
-  //   zoom: true, // Let's you scroll to zoom
-  //   depth: 1,   // How many steps away to show
-  //   scale: 1.1,
-  //   repulsion: 1000, // Higher number = more space between notes
-  //   forceStep: 10,
-  // },
-//   globalGraph: {
-//     drag: true,
-//     zoom: true,
-//     repulsion: 1500,
-//     linkDistance: 100, // Length of the lines
-//   },
-// }),
+    // Component.Graph({
+    //   localGraph: {
+    //     drag: true,
+    //     zoom: true,
+    //     depth: 1,
+    //     scale: 1.1,
+    //     repulsion: 1000,
+    //     forceStep: 10,
+    //   },
+    //   globalGraph: {
+    //     drag: true,
+    //     zoom: true,
+    //     repulsion: 1500,
+    //     linkDistance: 100,
+    //   },
+    // }),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
 }
 
-// components for pages that display lists of pages  (e.g. tags or folders)
+// components for pages that display lists of pages (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
   beforeBody: [Component.Breadcrumbs(), Component.ArticleTitle(), Component.ContentMeta()],
   left: [
@@ -72,7 +80,15 @@ export const defaultListPageLayout: PageLayout = {
     Component.MobileOnly(Component.Spacer()),
     Component.Search(),
     Component.Darkmode(),
-    Component.Explorer(),
+    // Component.Explorer({
+    //   sortFn: (a, b) => {
+    //     if ((!a.file && !b.file) || (a.file && b.file)) {
+    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true })
+    //     }
+    //     if (a.file && !b.file) return 1
+    //     return -1
+    //   },
+    // }),
   ],
   right: [],
 }
