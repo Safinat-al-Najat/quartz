@@ -77,7 +77,12 @@ const config: QuartzConfig = {
       Plugin.AliasRedirects(),
       Plugin.ComponentResources(),
       Plugin.ContentPage(),
-      Plugin.FolderPage(),
+      Plugin.FolderPage({
+        sort: (a, b) => {
+          // Sort alphabetically by title
+          return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
+        }
+      }),
       Plugin.TagPage(),
       Plugin.ContentIndex({
         enableSiteMap: true,
