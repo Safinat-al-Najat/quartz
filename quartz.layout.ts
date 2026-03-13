@@ -38,12 +38,12 @@ export const defaultContentPageLayout: PageLayout = {
       title: "New Topics",
       limit: 3,
     })),
+    // Explorer disabled - alphabetical sorting handled in quartz.config.ts
     // Component.Explorer({
     //   useSavedState: true,
     //   sortFn: (a, b) => {
-    //     // Folders before files, both sorted alphabetically
     //     if ((!a.file && !b.file) || (a.file && b.file)) {
-    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true })
+    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' })
     //     }
     //     if (a.file && !b.file) return 1
     //     return -1
@@ -51,22 +51,6 @@ export const defaultContentPageLayout: PageLayout = {
     // }),
   ],
   right: [
-    // Component.Graph({
-    //   localGraph: {
-    //     drag: true,
-    //     zoom: true,
-    //     depth: 1,
-    //     scale: 1.1,
-    //     repulsion: 1000,
-    //     forceStep: 10,
-    //   },
-    //   globalGraph: {
-    //     drag: true,
-    //     zoom: true,
-    //     repulsion: 1500,
-    //     linkDistance: 100,
-    //   },
-    // }),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
@@ -80,10 +64,11 @@ export const defaultListPageLayout: PageLayout = {
     Component.MobileOnly(Component.Spacer()),
     Component.Search(),
     Component.Darkmode(),
+    // Explorer disabled - alphabetical sorting handled in quartz.config.ts
     // Component.Explorer({
     //   sortFn: (a, b) => {
     //     if ((!a.file && !b.file) || (a.file && b.file)) {
-    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true })
+    //       return a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' })
     //     }
     //     if (a.file && !b.file) return 1
     //     return -1
