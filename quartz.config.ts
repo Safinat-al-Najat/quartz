@@ -79,8 +79,11 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          // Sort alphabetically by title
-          return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
+          // Get titles safely with fallback to slug
+          const titleA = a.title || a.slug || ""
+          const titleB = b.title || b.slug || ""
+          // Sort alphabetically
+          return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' })
         }
       }),
       Plugin.TagPage(),
