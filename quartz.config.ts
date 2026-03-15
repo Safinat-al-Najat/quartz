@@ -80,7 +80,6 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          // 1. Check for weight in frontmatter
           const weightA = a.frontmatter?.weight ?? Infinity;
           const weightB = b.frontmatter?.weight ?? Infinity;
       
@@ -92,8 +91,8 @@ const config: QuartzConfig = {
           const titleA = a.title || a.slug || "";
           const titleB = b.title || b.slug || "";
           return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
-        }
-      })
+          }
+        })
       Plugin.Assets(),
       Plugin.Static(),
       Plugin.Favicon(),
