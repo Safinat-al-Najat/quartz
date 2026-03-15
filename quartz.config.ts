@@ -80,12 +80,13 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          const weightA = a.frontmatter?.weight ?? Infinity;
-          const weightB = b.frontmatter?.weight ?? Infinity;
-      
-          if (weightA !== weightB) {
-            return weightA - weightB;
-          }
+      const aIsFolder = !a.file ? 0 : 1;
+      const bIsFolder = !b.file ? 0 : 1;
+      if (aIsFolder !== bIsFolder) return aIsFolder - bIsFolder;
+      const titleA = (a.displayName || a.name || "").toLowerCase();
+      const titleB = (b.displayName || b.name || "").toLowerCase();
+      return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' })
+    }
       
           // 2. Fallback to alphabetical if weights are equal or missing
           const titleA = a.title || a.slug || "";
