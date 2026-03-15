@@ -91,8 +91,8 @@ const config: QuartzConfig = {
           const titleA = a.title || a.slug || "";
           const titleB = b.title || b.slug || "";
           return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
-          }
-        })
+        }
+      }),
       Plugin.Assets(),
       Plugin.Static(),
       Plugin.Favicon(),
