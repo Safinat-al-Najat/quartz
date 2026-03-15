@@ -25,8 +25,8 @@ const config: QuartzConfig = {
       fontOrigin: "googleFonts",
       cdnCaching: true,
       typography: {
-        header: "Lexend", // Updated to Lexend for better readability for kids
-        body: "Inter",   // Updated to Inter for clarity
+        header: "Lexend",
+        body: "Inter",
         code: "IBM Plex Mono",
       },
       colors: {
@@ -80,17 +80,11 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-      const aIsFolder = !a.file ? 0 : 1;
-      const bIsFolder = !b.file ? 0 : 1;
-      if (aIsFolder !== bIsFolder) return aIsFolder - bIsFolder;
-      const titleA = (a.displayName || a.name || "").toLowerCase();
-      const titleB = (b.displayName || b.name || "").toLowerCase();
-      return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' })
-    }
-      
-          // 2. Fallback to alphabetical if weights are equal or missing
-          const titleA = a.title || a.slug || "";
-          const titleB = b.title || b.slug || "";
+          const aIsFolder = !a.file ? 0 : 1;
+          const bIsFolder = !b.file ? 0 : 1;
+          if (aIsFolder !== bIsFolder) return aIsFolder - bIsFolder;
+          const titleA = (a.displayName || a.name || "").toLowerCase();
+          const titleB = (b.displayName || b.name || "").toLowerCase();
           return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
         }
       }),
