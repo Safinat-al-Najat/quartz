@@ -80,18 +80,20 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          // Get titles safely with fallback to slug
-          const titleA = a.title || a.slug || ""
-          const titleB = b.title || b.slug || ""
-          // Sort alphabetically
-          return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' })
+          // 1. Check for weight in frontmatter
+          const weightA = a.frontmatter?.weight ?? Infinity;
+          const weightB = b.frontmatter?.weight ?? Infinity;
+      
+          if (weightA !== weightB) {
+            return weightA - weightB;
+          }
+      
+          // 2. Fallback to alphabetical if weights are equal or missing
+          const titleA = a.title || a.slug || "";
+          const titleB = b.title || b.slug || "";
+          return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
         }
-      }),
-      Plugin.TagPage(),
-      Plugin.ContentIndex({
-        enableSiteMap: true,
-        enableRSS: true,
-      }),
+      })
       Plugin.Assets(),
       Plugin.Static(),
       Plugin.Favicon(),
