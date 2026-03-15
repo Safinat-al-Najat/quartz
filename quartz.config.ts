@@ -80,8 +80,8 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          const aIsFolder = !a.file ? 0 : 1;
-          const bIsFolder = !b.file ? 0 : 1;
+          const aIsFolder = (a.children && a.children.length > 0) ? 0 : 1;
+          const bIsFolder = (b.children && b.children.length > 0) ? 0 : 1;
           if (aIsFolder !== bIsFolder) return aIsFolder - bIsFolder;
           const titleA = (a.displayName || a.name || "").toLowerCase();
           const titleB = (b.displayName || b.name || "").toLowerCase();
