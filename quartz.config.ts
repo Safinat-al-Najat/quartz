@@ -17,6 +17,7 @@ const config: QuartzConfig = {
     },
     locale: "en-US",
     baseUrl: "safinat-al-najat.github.io/quartz",
+    ogImagePath: "/static/preview.png",
     useIndexHtml: true,
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",
