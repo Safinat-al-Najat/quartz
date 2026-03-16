@@ -105,14 +105,12 @@ const config: QuartzConfig = {
       Plugin.Static(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),
-      Plugin.ContentIndex({     // <--- ADD THIS
+      Plugin.ContentIndex({
         enableSiteMap: true,
         enableRSS: true,
       }),
-      Plugin.Search(),           // <--- ADD THIS
-    ],
-      // Plugin.CustomOgImages(),
-    ],
+      Plugin.Search(), // <--- Ensure there is a comma here if it's not the last item
+    ], // <--- This is line 115 where it was crashing
   },
 }
 
