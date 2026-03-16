@@ -103,14 +103,15 @@ const config: QuartzConfig = {
       }),
       Plugin.Assets(),
       Plugin.Static(),
+      Plugin.Assets(),
+      Plugin.Static(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),
       Plugin.ContentIndex({
         enableSiteMap: true,
         enableRSS: true,
       }),
-      Plugin.Search(), // <--- Ensure there is a comma here if it's not the last item
-    ], // <--- This is line 115 where it was crashing
+    ], // <--- No Plugin.Search() here!
   },
 }
 
