@@ -34,21 +34,21 @@ export const defaultContentPageLayout: PageLayout = {
     }),
     Component.Darkmode(),
     Component.ReaderMode(),
-    // Component.DesktopOnly(Component.RecentNotes({
-    // title: "New Topics",
-    // limit: 3,
-    // })),
+    Component.DesktopOnly(Component.RecentNotes({
+    title: "New Topics",
+    limit: 3,
+    })),
     // Explorer disabled - alphabetical sorting handled in quartz.config.ts
-    Component.Explorer({
-    useSavedState: true,
-    sortFn: (a, b) => {
-    if ((!a.file && !b.file) || (a.file && b.file)) {
-    return a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' })
-    }
-    if (a.file && !b.file) return 1
-    return -1
-    },
-    }),
+    // Component.Explorer({
+    // useSavedState: true,
+    // sortFn: (a, b) => {
+    // if ((!a.file && !b.file) || (a.file && b.file)) {
+    // return a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' })
+    // }
+    // if (a.file && !b.file) return 1
+    // return -1
+    // },
+    // }),
   ],
   right: [
     Component.DesktopOnly(Component.TableOfContents()),
