@@ -105,6 +105,12 @@ const config: QuartzConfig = {
       Plugin.Static(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),
+      Plugin.ContentIndex({     // <--- ADD THIS
+        enableSiteMap: true,
+        enableRSS: true,
+      }),
+      Plugin.Search(),           // <--- ADD THIS
+    ],
       // Plugin.CustomOgImages(),
     ],
   },
