@@ -19,7 +19,7 @@ const config: QuartzConfig = {
     baseUrl: "safinat-al-najat.github.io/quartz",
     ogImagePath: "/static/preview.png",
     useIndexHtml: true,
-    ignorePatterns: ["private", "templates", ".obsidian"],
+    ignorePatterns: ["private", "templates", ".obsidian", "node_modules", "public", ".quartz-cache", ".git"],
     defaultDateType: "modified",
     theme: {
       fontOrigin: "googleFonts",
