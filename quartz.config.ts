@@ -80,11 +80,24 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage({
         sort: (a, b) => {
-          const aIsFolder = (a.children && a.children.length > 0) ? 0 : 1;
-          const bIsFolder = (b.children && b.children.length > 0) ? 0 : 1;
-          if (aIsFolder !== bIsFolder) return aIsFolder - bIsFolder;
-          const titleA = (a.displayName || a.name || "").toLowerCase();
-          const titleB = (b.displayName || b.name || "").toLowerCase();
+          // Priority 1: Check for Dashboard Weight (if set, it overrides everything)
+          const weightA = a.frontmatter?.weight ?? 999;
+          const weightB = b.frontmatter?.weight ?? 999;
+          if (weightA !== weightB) {
+            return weightA - weightB;
+          }
+
+          // Priority 2: Put Subfolders before Files
+          // In FolderPage, subfolders are identified because their slug ends with "index"
+          const aIsFolder = a.slug?.endsWith("index") ? 0 : 1;
+          const bIsFolder = b.slug?.endsWith("index") ? 0 : 1;
+          if (aIsFolder !== bIsFolder) {
+            return aIsFolder - bIsFolder;
+          }
+
+          // Priority 3: Alphabetical sort (by frontmatter title, then fallback to filename)
+          const titleA = (a.frontmatter?.title || a.slug || "").toLowerCase();
+          const titleB = (b.frontmatter?.title || b.slug || "").toLowerCase();
           return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
         }
       }),
