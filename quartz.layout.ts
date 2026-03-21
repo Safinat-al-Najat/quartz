@@ -37,10 +37,10 @@ export const defaultContentPageLayout: PageLayout = {
     Component.Darkmode(),
     Component.ReaderMode(),
     // Add Recent Notes here - properly configured
-    Component.RecentNotes.DesktopOnly({
-      title: "Recent Posts",           // Title to display
-      limit: 10,                        // Number of posts to show
-      showTags: true,                   // Show tags on each post
+    Component.DesktopOnly(Component.RecentNotes({
+      title: "Recent Posts",
+      limit: 10,
+      showTags: true,
       filter: (f) => {
         const created = f.dates?.created
         if (!created) return false
@@ -49,14 +49,13 @@ export const defaultContentPageLayout: PageLayout = {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         
         return new Date(created) > thirtyDaysAgo
-      }
+      },  // ← ADDED COMMA HERE
       sort: (a, b) => {
-        // Sort by date - newest first
         const dateA = a.dates?.modified || a.dates?.created || new Date(0)
         const dateB = b.dates?.modified || b.dates?.created || new Date(0)
         return dateB.getTime() - dateA.getTime()
       }
-    }),
+    }))  // ← Note the double closing parentheses
     // Explorer disabled - alphabetical sorting handled in quartz.config.ts
     // Component.Explorer({
     // useSavedState: true,
