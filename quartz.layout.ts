@@ -37,7 +37,7 @@ export const defaultContentPageLayout: PageLayout = {
     Component.Darkmode(),
     Component.ReaderMode(),
     // Add Recent Notes here - properly configured
-    Component.RecentNotes({
+    Component.RecentNotes.DesktopOnly({
       title: "Recent Posts",           // Title to display
       limit: 10,                        // Number of posts to show
       showTags: true,                   // Show tags on each post
