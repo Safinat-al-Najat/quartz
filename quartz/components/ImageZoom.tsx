@@ -30,8 +30,8 @@ export default (() => {
       const images = document.querySelectorAll('.page-content img, article img, main img, .content img');
       if (images.length > 0 && typeof mediumZoom !== 'undefined') {
         mediumZoom(images, {
-          margin: 8,  // Much more zoom than before (was 24)
-          background: 'rgba(0, 0, 0, 0.85)',
+          margin: 0,  // ← Change this to 0 for maximum zoom
+          background: 'rgba(0, 0, 0, 0.9)',
           scrollOffset: 40
         });
       }
