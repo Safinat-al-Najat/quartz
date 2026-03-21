@@ -41,15 +41,15 @@ export const defaultContentPageLayout: PageLayout = {
       title: "Recent Posts",
       limit: 10,
       showTags: true,
-      filter: (f) => {
-        const created = f.dates?.created
-        if (!created) return false
+      // filter: (f) => {
+      //   const created = f.dates?.created
+      //   if (!created) return false
         
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      //   const thirtyDaysAgo = new Date()
+      //   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         
-        return new Date(created) > thirtyDaysAgo
-      },  // ← ADDED COMMA HERE
+      //   return new Date(created) > thirtyDaysAgo
+      // },  // ← ADDED COMMA HERE
       sort: (a, b) => {
         const dateA = a.dates?.modified || a.dates?.created || new Date(0)
         const dateB = b.dates?.modified || b.dates?.created || new Date(0)
