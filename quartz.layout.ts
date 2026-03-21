@@ -36,10 +36,32 @@ export const defaultContentPageLayout: PageLayout = {
     }),
     Component.Darkmode(),
     Component.ReaderMode(),
-    Component.DesktopOnly(Component.RecentNotes({
-    title: "New Topics",
-    limit: 3,
-    })),
+    // Add Recent Notes here - properly configured
+    Component.RecentNotes({
+      title: "Recent Posts",           // Title to display
+      limit: 10,                        // Number of posts to show
+      showTags: true,                   // Show tags on each post
+      filter: (f) => {
+        // Filter out unwanted pages
+        const slug = f.slug || ""
+        
+        // Exclude index pages
+        if (slug.endsWith("index")) return false
+        
+        // Exclude specific folders (customize these!)
+        if (slug.startsWith("tags/")) return false
+        if (slug.startsWith("templates/")) return false
+        
+        // Only show pages with dates (actual posts)
+        return f.dates?.created !== undefined
+      },
+      sort: (a, b) => {
+        // Sort by date - newest first
+        const dateA = a.dates?.modified || a.dates?.created || new Date(0)
+        const dateB = b.dates?.modified || b.dates?.created || new Date(0)
+        return dateB.getTime() - dateA.getTime()
+      }
+    }),
     // Explorer disabled - alphabetical sorting handled in quartz.config.ts
     // Component.Explorer({
     // useSavedState: true,
