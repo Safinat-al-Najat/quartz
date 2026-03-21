@@ -42,19 +42,14 @@ export const defaultContentPageLayout: PageLayout = {
       limit: 10,                        // Number of posts to show
       showTags: true,                   // Show tags on each post
       filter: (f) => {
-        // Filter out unwanted pages
-        const slug = f.slug || ""
+        const created = f.dates?.created
+        if (!created) return false
         
-        // Exclude index pages
-        if (slug.endsWith("index")) return false
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         
-        // Exclude specific folders (customize these!)
-        if (slug.startsWith("tags/")) return false
-        if (slug.startsWith("templates/")) return false
-        
-        // Only show pages with dates (actual posts)
-        return f.dates?.created !== undefined
-      },
+        return new Date(created) > thirtyDaysAgo
+      }
       sort: (a, b) => {
         // Sort by date - newest first
         const dateA = a.dates?.modified || a.dates?.created || new Date(0)
