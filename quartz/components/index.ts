@@ -1,4 +1,7 @@
 import Content from "./pages/Content"
+// Add this import at the top with other imports
+import ImageZoom from "./ImageZoom"
+
 import TagContent from "./pages/TagContent"
 import FolderContent from "./pages/FolderContent"
 import NotFound from "./pages/404"
@@ -50,4 +53,5 @@ export {
   Comments,
   Flex,
   ConditionalRender,
+  ImageZoom,  // <-- Add this line
 }
