@@ -38,7 +38,7 @@ export const defaultContentPageLayout: PageLayout = {
     Component.ReaderMode(),
     // Add Recent Notes here - properly configured
     Component.DesktopOnly(Component.RecentNotes({
-      title: "Recent Posts",
+      title: "New Topics",
       limit: 10,
       showTags: true,
       filter: (f) => {
