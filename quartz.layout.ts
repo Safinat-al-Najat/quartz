@@ -6,7 +6,10 @@ export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
   header: [],
   afterBody: [
-    Component.ImageZoom(),  // <-- Add this line
+    Component.ImageZoom(),
+    Component.Chatbot({
+      proxyUrl: "https://safinat-chatbot-proxy.safinat-research.workers.dev/api/chat",
+    }),
   ],
   footer: Component.Footer({
     links: {
