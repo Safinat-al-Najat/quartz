@@ -177,6 +177,9 @@ async function checkAndDecrypt() {
 
       gateContainer.remove();
 
+      // Explicitly unhide all locked navigation links and folders
+      updateSidebarVisibility();
+
       // Dispatch nav event so other components (mathjax, popovers, etc.) hydrate the decrypted DOM
       document.dispatchEvent(new CustomEvent("nav"));
       return true;
@@ -218,10 +221,10 @@ async function checkAndDecrypt() {
 
     try {
       const { cryptoKey, base64Key } = await deriveKeyFromPassword(password);
+      sessionStorage.setItem("archive_session_key", base64Key);
       const success = await tryDecrypt(cryptoKey);
-      if (success) {
-        sessionStorage.setItem("archive_session_key", base64Key);
-      } else {
+      if (!success) {
+        sessionStorage.removeItem("archive_session_key");
         errorEl.textContent = "Incorrect password. Please try again.";
         setTimeout(() => {
           modalContent.classList.add("shake");

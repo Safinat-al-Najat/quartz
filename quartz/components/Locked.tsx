@@ -3,7 +3,7 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 export default (() => {
   const Locked: QuartzComponent = ({ fileData, displayClass }: QuartzComponentProps) => {
     // Critical guard: Only render this folder card component on the main homepage
-    if (fileData.slug !== "index") {
+    if (fileData.slug !== "index" && fileData.slug !== "") {
       return null
     }
 
