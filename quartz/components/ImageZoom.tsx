@@ -1,7 +1,7 @@
-import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+import { QuartzComponent, QuartzComponentConstructor } from "./types"
 
 export default (() => {
-  const ImageZoom: QuartzComponent = ({ displayClass }: QuartzComponentProps) => {
+  const ImageZoom: QuartzComponent = () => {
     return null
   }
 

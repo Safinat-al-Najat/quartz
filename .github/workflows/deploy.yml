@@ -3,7 +3,7 @@ name: Deploy Quartz site to GitHub Pages
 on:
   push:
     branches:
-      - v4        # Must match your default branch
+      - v4 # Must match your default branch
   repository_dispatch:
     types: [notes_updated]
   workflow_dispatch:
@@ -30,22 +30,22 @@ jobs:
         run: |
           # 1. Clear the content folder
           rm -rf content/*
-          
+
           # 2. Clone the notes repo from the ORGANIZATION
           # Make sure GH_TOKEN is a secret in this Quartz repo!
           # Change 'NAME-OF-YOUR-OBSIDIAN-REPO' to the actual name of your notes repo
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/Safinat-al-Najat/safinat-al-najat.github.io.git temp_vault
-          
+
           # 3. Pull everything out
           if [ -d "temp_vault/Extensive Research" ]; then
             cp -r "temp_vault/Extensive Research"/* content/
           else
             cp -r temp_vault/* content/
           fi
-          
+
           # 4. Safety: Force index.md
           find content -maxdepth 2 -iname "index.md" -exec mv {} content/index.md \;
-          
+
           # 5. Cleanup
           rm -rf temp_vault
 
@@ -53,8 +53,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
-          
+          cache: "npm"
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:

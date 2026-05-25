@@ -13,7 +13,9 @@ export default (() => {
           <div class="locked-folder-icon">🔒</div>
           <div class="locked-folder-details">
             <h3 class="locked-folder-title">Locked Vault</h3>
-            <p class="locked-folder-desc">Access encrypted research archives. Session authentication required.</p>
+            <p class="locked-folder-desc">
+              Access encrypted research archives. Session authentication required.
+            </p>
           </div>
           <div class="locked-folder-arrow">→</div>
         </a>

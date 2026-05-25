@@ -17,9 +17,17 @@ const config: QuartzConfig = {
     },
     locale: "en-US",
     baseUrl: "safinat-al-najat.github.io/quartz",
-    ogImagePath: "/static/preview.png",
-    useIndexHtml: true,
-    ignorePatterns: ["private", "templates", ".obsidian", "node_modules", "public", ".quartz-cache", ".git"],
+    // ogImagePath: "/static/preview.png",
+    // useIndexHtml: true,
+    ignorePatterns: [
+      "private",
+      "templates",
+      ".obsidian",
+      "node_modules",
+      "public",
+      ".quartz-cache",
+      ".git",
+    ],
     defaultDateType: "modified",
     theme: {
       fontOrigin: "googleFonts",
@@ -39,6 +47,7 @@ const config: QuartzConfig = {
           secondary: "#388e3c",
           tertiary: "#81c784",
           highlight: "rgba(56, 142, 60, 0.1)",
+          textHighlight: "#fff3bf",
         },
         darkMode: {
           light: "#1a1b1e",
@@ -49,6 +58,7 @@ const config: QuartzConfig = {
           secondary: "#69db7c",
           tertiary: "#b2f2bb",
           highlight: "rgba(105, 219, 124, 0.1)",
+          textHighlight: "rgba(255, 255, 255, 0.15)",
         },
       },
     },
@@ -81,25 +91,25 @@ const config: QuartzConfig = {
       Plugin.FolderPage({
         sort: (a, b) => {
           // Priority 1: Check for Dashboard Weight (if set, it overrides everything)
-          const weightA = a.frontmatter?.weight ?? 999;
-          const weightB = b.frontmatter?.weight ?? 999;
+          const weightA = (a.frontmatter?.weight as number) ?? 999
+          const weightB = (b.frontmatter?.weight as number) ?? 999
           if (weightA !== weightB) {
-            return weightA - weightB;
+            return (weightA as number) - (weightB as number)
           }
 
           // Priority 2: Put Subfolders before Files
           // In FolderPage, subfolders are identified because their slug ends with "index"
-          const aIsFolder = a.slug?.endsWith("index") ? 0 : 1;
-          const bIsFolder = b.slug?.endsWith("index") ? 0 : 1;
+          const aIsFolder = a.slug?.endsWith("index") ? 0 : 1
+          const bIsFolder = b.slug?.endsWith("index") ? 0 : 1
           if (aIsFolder !== bIsFolder) {
-            return aIsFolder - bIsFolder;
+            return aIsFolder - bIsFolder
           }
 
           // Priority 3: Alphabetical sort (by frontmatter title, then fallback to filename)
-          const titleA = (a.frontmatter?.title || a.slug || "").toLowerCase();
-          const titleB = (b.frontmatter?.title || b.slug || "").toLowerCase();
-          return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
-        }
+          const titleA = (a.frontmatter?.title || a.slug || "").toLowerCase()
+          const titleB = (b.frontmatter?.title || b.slug || "").toLowerCase()
+          return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: "base" })
+        },
       }),
       Plugin.Assets(),
       Plugin.Static(),

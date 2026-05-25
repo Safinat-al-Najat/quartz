@@ -18,7 +18,10 @@ export default (() => {
           <div class="password-gate-content">
             <span class="password-gate-arabic">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ</span>
             <h2>Archive Locked</h2>
-            <p>This content is part of the protected research archives. Please enter the master decryption key to unlock the archives.</p>
+            <p>
+              This content is part of the protected research archives. Please enter the master
+              decryption key to unlock the archives.
+            </p>
             <div class="password-gate-input-group">
               <input
                 type="password"

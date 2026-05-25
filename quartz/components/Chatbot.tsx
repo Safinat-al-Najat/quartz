@@ -13,12 +13,22 @@ const defaultOptions: ChatbotOptions = {
 }
 
 export default ((userOpts?: Partial<ChatbotOptions>) => {
-  const Chatbot: QuartzComponent = ({ displayClass, cfg }: QuartzComponentProps) => {
+  const Chatbot: QuartzComponent = ({ displayClass }: QuartzComponentProps) => {
     const opts = { ...defaultOptions, ...userOpts }
     return (
       <div id="quartz-chatbot" class={displayClass} data-proxy-url={opts.proxyUrl}>
         <button id="chatbot-toggle-btn" class="chatbot-toggle-btn" aria-label="Open Chatbot">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
         </button>
@@ -28,11 +38,16 @@ export default ((userOpts?: Partial<ChatbotOptions>) => {
               <span class="chatbot-status-indicator"></span>
               <h3>Research Assistant</h3>
             </div>
-            <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Close Chatbot">&times;</button>
+            <button id="chatbot-close-btn" class="chatbot-close-btn" aria-label="Close Chatbot">
+              &times;
+            </button>
           </div>
           <div id="chatbot-messages" class="chatbot-messages">
             <div class="chatbot-message chatbot-system">
-              <p>Welcome! Ask me any question related to the research notes on this site, and I will search the local content index to find answers for you.</p>
+              <p>
+                Welcome! Ask me any question related to the research notes on this site, and I will
+                search the local content index to find answers for you.
+              </p>
             </div>
           </div>
           <form id="chatbot-input-form" class="chatbot-input-form">
@@ -45,7 +60,17 @@ export default ((userOpts?: Partial<ChatbotOptions>) => {
               required
             />
             <button type="submit" id="chatbot-submit" class="chatbot-submit" aria-label="Send">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
               </svg>

@@ -1,23 +1,180 @@
-import { ContentIndex, ContentDetails } from "../../plugins/emitters/contentIndex"
+import { ContentDetails } from "../../plugins/emitters/contentIndex"
 import { FullSlug, resolveRelative, isAbsoluteURL } from "../../util/path"
 
 // Stop words to clean user question for keyword search matching
 const STOP_WORDS = new Set([
-  "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "arent",
-  "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by",
-  "cant", "cannot", "could", "couldnt", "did", "didnt", "do", "does", "doesnt", "doing", "dont",
-  "down", "during", "each", "few", "for", "from", "further", "had", "hadnt", "has", "hasnt", "have",
-  "havent", "having", "he", "hed", "hell", "hes", "her", "here", "heres", "hers", "herself", "him",
-  "himself", "his", "how", "hows", "i", "id", "ill", "im", "ive", "if", "in", "into", "is", "isnt",
-  "it", "its", "itself", "lets", "me", "more", "most", "mustnt", "my", "myself", "no", "nor", "not",
-  "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
-  "over", "own", "same", "shant", "she", "shed", "shell", "shes", "should", "shouldnt", "so", "some",
-  "such", "than", "that", "thats", "the", "their", "theirs", "them", "themselves", "then", "there",
-  "theres", "these", "they", "theyd", "theyll", "theyre", "theyve", "this", "those", "through",
-  "to", "too", "under", "until", "up", "very", "was", "wasnt", "we", "wed", "well", "were", "weve",
-  "werent", "what", "whats", "when", "whens", "where", "wheres", "which", "while", "who", "whos",
-  "whom", "why", "whys", "with", "wont", "would", "wouldnt", "you", "youd", "youll", "youre", "youve",
-  "your", "yours", "yourself", "yourselves"
+  "a",
+  "about",
+  "above",
+  "after",
+  "again",
+  "against",
+  "all",
+  "am",
+  "an",
+  "and",
+  "any",
+  "are",
+  "arent",
+  "as",
+  "at",
+  "be",
+  "because",
+  "been",
+  "before",
+  "being",
+  "below",
+  "between",
+  "both",
+  "but",
+  "by",
+  "cant",
+  "cannot",
+  "could",
+  "couldnt",
+  "did",
+  "didnt",
+  "do",
+  "does",
+  "doesnt",
+  "doing",
+  "dont",
+  "down",
+  "during",
+  "each",
+  "few",
+  "for",
+  "from",
+  "further",
+  "had",
+  "hadnt",
+  "has",
+  "hasnt",
+  "have",
+  "havent",
+  "having",
+  "he",
+  "hed",
+  "hell",
+  "hes",
+  "her",
+  "here",
+  "heres",
+  "hers",
+  "herself",
+  "him",
+  "himself",
+  "his",
+  "how",
+  "hows",
+  "i",
+  "id",
+  "ill",
+  "im",
+  "ive",
+  "if",
+  "in",
+  "into",
+  "is",
+  "isnt",
+  "it",
+  "its",
+  "itself",
+  "lets",
+  "me",
+  "more",
+  "most",
+  "mustnt",
+  "my",
+  "myself",
+  "no",
+  "nor",
+  "not",
+  "of",
+  "off",
+  "on",
+  "once",
+  "only",
+  "or",
+  "other",
+  "ought",
+  "our",
+  "ours",
+  "ourselves",
+  "out",
+  "over",
+  "own",
+  "same",
+  "shant",
+  "she",
+  "shed",
+  "shell",
+  "shes",
+  "should",
+  "shouldnt",
+  "so",
+  "some",
+  "such",
+  "than",
+  "that",
+  "thats",
+  "the",
+  "their",
+  "theirs",
+  "them",
+  "themselves",
+  "then",
+  "there",
+  "theres",
+  "these",
+  "they",
+  "theyd",
+  "theyll",
+  "theyre",
+  "theyve",
+  "this",
+  "those",
+  "through",
+  "to",
+  "too",
+  "under",
+  "until",
+  "up",
+  "very",
+  "was",
+  "wasnt",
+  "we",
+  "wed",
+  "well",
+  "were",
+  "weve",
+  "werent",
+  "what",
+  "whats",
+  "when",
+  "whens",
+  "where",
+  "wheres",
+  "which",
+  "while",
+  "who",
+  "whos",
+  "whom",
+  "why",
+  "whys",
+  "with",
+  "wont",
+  "would",
+  "wouldnt",
+  "you",
+  "youd",
+  "youll",
+  "youre",
+  "youve",
+  "your",
+  "yours",
+  "yourself",
+  "yourselves",
 ])
 
 function tokenize(text: string): string[] {
@@ -92,7 +249,12 @@ function parseBold(text: string): string {
 }
 
 function resolveMarkdownLink(href: string, currentSlug: FullSlug): string {
-  if (isAbsoluteURL(href) || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+  if (
+    isAbsoluteURL(href) ||
+    href.startsWith("#") ||
+    href.startsWith("mailto:") ||
+    href.startsWith("tel:")
+  ) {
     return href
   }
   let target = href
@@ -104,10 +266,7 @@ function resolveMarkdownLink(href: string, currentSlug: FullSlug): string {
 
 function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
   // Safe HTML escapes keeping UTF-8 special characters intact
-  let escaped = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+  let escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
   // Inline code: extract `code` spans first so their contents are protected
   // from bold/link processing. Use a placeholder approach for stream safety.
@@ -208,11 +367,20 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
   const inputField = container.querySelector("#chatbot-input") as HTMLInputElement
   const submitBtn = container.querySelector("#chatbot-submit") as HTMLButtonElement
 
-  if (!toggleBtn || !closeBtn || !chatWindow || !messagesContainer || !inputForm || !inputField || !submitBtn) {
+  if (
+    !toggleBtn ||
+    !closeBtn ||
+    !chatWindow ||
+    !messagesContainer ||
+    !inputForm ||
+    !inputField ||
+    !submitBtn
+  ) {
     return
   }
 
-  const proxyUrl = container.dataset.proxyUrl || "https://safinat-chatbot-proxy.workers.dev/api/chat"
+  const proxyUrl =
+    container.dataset.proxyUrl || "https://safinat-chatbot-proxy.workers.dev/api/chat"
 
   // Restore toggle state
   const isChatOpen = sessionStorage.getItem("chatbot-open") === "true"
@@ -298,7 +466,8 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
 
       if (!response.ok) {
         if (response.status === 429) {
-          textNode.innerHTML = "<p>Rate limit exceeded. Please wait a moment before trying again.</p>"
+          textNode.innerHTML =
+            "<p>Rate limit exceeded. Please wait a moment before trying again.</p>"
           botBubble.className = "chatbot-message chatbot-error"
         } else {
           textNode.innerHTML = `<p>Error: Unable to fetch response (Status ${response.status}).</p>`
@@ -348,7 +517,6 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
           }
         }
       }
-
     } catch (err: any) {
       textNode.innerHTML = `<p>Connection Error: ${err.message || err}.</p>`
       botBubble.className = "chatbot-message chatbot-error"

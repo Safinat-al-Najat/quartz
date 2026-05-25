@@ -24,7 +24,7 @@ export const sharedPageComponents: SharedLayout = {
 export const defaultContentPageLayout: PageLayout = {
   beforeBody: [
     Component.ConditionalRender({
-    component: Component.Breadcrumbs(),
+      component: Component.Breadcrumbs(),
       condition: (page) => page.fileData.slug !== "index",
     }),
     Component.ArticleTitle(),
@@ -35,32 +35,31 @@ export const defaultContentPageLayout: PageLayout = {
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
-    Component.Search({
-      enableShortcut: true,
-      placeholder: "Search for a topic...",
-    }),
+    Component.Search(),
     Component.Darkmode(),
     Component.ReaderMode(),
     // Add Recent Notes here - properly configured
-    Component.DesktopOnly(Component.RecentNotes({
-      title: "New Topics",
-      limit: 10,
-      showTags: true,
-      filter: (f) => {
-        const created = f.dates?.created
-        if (!created) return false
-        
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 10)
-        
-        return new Date(created) > thirtyDaysAgo
-      },  // ← ADDED COMMA HERE
-      sort: (a, b) => {
-        const dateA = a.dates?.modified || a.dates?.created || new Date(0)
-        const dateB = b.dates?.modified || b.dates?.created || new Date(0)
-        return dateB.getTime() - dateA.getTime()
-      }
-    }))  // ← Note the double closing parentheses
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "New Topics",
+        limit: 10,
+        showTags: true,
+        filter: (f) => {
+          const created = f.dates?.created
+          if (!created) return false
+
+          const thirtyDaysAgo = new Date()
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 10)
+
+          return new Date(created) > thirtyDaysAgo
+        }, // ← ADDED COMMA HERE
+        sort: (a, b) => {
+          const dateA = a.dates?.modified || a.dates?.created || new Date(0)
+          const dateB = b.dates?.modified || b.dates?.created || new Date(0)
+          return dateB.getTime() - dateA.getTime()
+        },
+      }),
+    ), // ← Note the double closing parentheses
     // Explorer disabled - alphabetical sorting handled in quartz.config.ts
     // Component.Explorer({
     // useSavedState: true,
@@ -73,10 +72,7 @@ export const defaultContentPageLayout: PageLayout = {
     // },
     // }),
   ],
-  right: [
-    Component.DesktopOnly(Component.TableOfContents()),
-    Component.Backlinks(),
-  ],
+  right: [Component.DesktopOnly(Component.TableOfContents()), Component.Backlinks()],
 }
 
 // components for pages that display lists of pages (e.g. tags or folders)
