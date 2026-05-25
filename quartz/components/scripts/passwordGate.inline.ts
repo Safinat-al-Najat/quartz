@@ -89,7 +89,7 @@ function setupTitleObserver(newTitle: string) {
 // Controls visibility of locked navigation elements and empty parent directories
 function updateSidebarVisibility() {
   const isUnlocked = !!sessionStorage.getItem("archive_session_key");
-  const links = document.querySelectorAll(".sidebar a[href*='locked'], .explorer a[href*='locked'], .backlinks a[href*='locked'], .recent-notes a[href*='locked']");
+  const links = document.querySelectorAll(".sidebar a[href*='/locked'], .explorer a[href*='/locked'], .backlinks a[href*='/locked'], .recent-notes a[href*='/locked']");
 
   // 1. Mark files matching 'locked' folder path
   links.forEach(link => {
