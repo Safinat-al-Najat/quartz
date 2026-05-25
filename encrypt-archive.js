@@ -55,7 +55,70 @@ function encodeAssetPath(assetPath) {
     .join("/")
 }
 
-export function transformObsidianImageEmbeds(markdown) {
+function slugifyPathSegment(segment) {
+  return segment
+    .replace(/\s/g, "-")
+    .replace(/&/g, "-and-")
+    .replace(/%/g, "-percent")
+    .replace(/\?/g, "")
+    .replace(/#/g, "")
+}
+
+function slugifyAssetPath(assetPath) {
+  return assetPath.split(/[\\/]/).map(slugifyPathSegment).join("/")
+}
+
+function pageRootPrefix(relativeMarkdownPath) {
+  const slug = slugifyAssetPath(relativeMarkdownPath).replace(/\.[A-Za-z0-9]+$/, "")
+  const pageSegments = slug.split("/").filter(Boolean)
+  const parentDepth = Math.max(pageSegments.length - 1, 0)
+  return parentDepth === 0 ? "." : Array(parentDepth).fill("..").join("/")
+}
+
+function buildAssetIndex() {
+  const assets = new Map()
+  const files = getFiles(CONTENT_DIR, "")
+
+  for (const fp of files) {
+    if (fp.endsWith(".md")) continue
+
+    const relativePath = path.relative(CONTENT_DIR, fp).replace(/\\/g, "/")
+    const fileName = path.basename(relativePath)
+    const existing = assets.get(fileName)
+
+    if (existing === undefined) {
+      assets.set(fileName, relativePath)
+    } else if (existing !== relativePath) {
+      assets.set(fileName, null)
+    }
+  }
+
+  return assets
+}
+
+function resolveObsidianAssetPath(assetPath, relativeMarkdownPath, assetIndex) {
+  const normalizedAssetPath = assetPath.replace(/\\/g, "/")
+  const relativeDir = path.dirname(relativeMarkdownPath).replace(/\\/g, "/")
+  const sameFolderCandidate = path
+    .join(relativeDir === "." ? "" : relativeDir, normalizedAssetPath)
+    .replace(/\\/g, "/")
+  const contentRootCandidate = normalizedAssetPath
+
+  const candidates = [sameFolderCandidate, contentRootCandidate]
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(CONTENT_DIR, candidate))) {
+      return candidate
+    }
+  }
+
+  const indexedPath = assetIndex.get(path.basename(normalizedAssetPath))
+  return indexedPath || normalizedAssetPath
+}
+
+export function transformObsidianImageEmbeds(
+  markdown,
+  resolveAssetPath = (assetPath) => assetPath,
+) {
   return markdown.replace(
     /!\[\[([^\]\|\#]+)(?:#[^\]\|]+)?(?:\|([^\]]*))?\]\]/g,
     (match, rawPath, rawAlias) => {
@@ -64,8 +127,9 @@ export function transformObsidianImageEmbeds(markdown) {
       if (!OBSIDIAN_IMAGE_EXTENSIONS.has(ext)) return match
 
       const { alt, width, height } = parseObsidianImageAlias(rawAlias)
+      const resolvedAssetPath = resolveAssetPath(assetPath)
       const attrs = [
-        `src="${escapeHtmlAttribute(encodeAssetPath(assetPath))}"`,
+        `src="${escapeHtmlAttribute(encodeAssetPath(resolvedAssetPath))}"`,
         `alt="${escapeHtmlAttribute(alt)}"`,
       ]
 
@@ -110,8 +174,14 @@ function removeEmptyDirs(dir) {
 }
 
 // Compile Markdown body to HTML
-async function compileMarkdown(body) {
-  body = transformObsidianImageEmbeds(body)
+async function compileMarkdown(body, relativeMarkdownPath, assetIndex) {
+  const rootPrefix = pageRootPrefix(relativeMarkdownPath)
+
+  body = transformObsidianImageEmbeds(body, (assetPath) => {
+    const resolved = resolveObsidianAssetPath(assetPath, relativeMarkdownPath, assetIndex)
+    return path.posix.join(rootPrefix, slugifyAssetPath(resolved))
+  })
+
   const processor = unified().use(remarkParse).use(remarkRehype, { allowDangerousHtml: true })
   const mdAst = processor.parse(body)
   const htmlAst = await processor.run(mdAst)
@@ -229,6 +299,7 @@ async function encryptAll() {
   fs.writeFileSync(verificationFile, JSON.stringify({ verification: verificationToken }), "utf8")
 
   const mdFiles = getFiles(LOCKED_DIR, ".md")
+  const assetIndex = buildAssetIndex()
   let encryptCount = 0
 
   for (const mdFp of mdFiles) {
@@ -250,7 +321,7 @@ async function encryptAll() {
     fs.writeFileSync(backupFp, fileContent, "utf8")
 
     // 2. Compile Markdown body to HTML
-    const htmlContent = await compileMarkdown(body)
+    const htmlContent = await compileMarkdown(body, relativePath, assetIndex)
     const realTitle = data.title || path.basename(mdFp, ".md")
 
     // 3. Prepare JSON payload package
