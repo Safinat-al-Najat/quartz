@@ -55,7 +55,87 @@ async function importKeyFromBase64(base64Key: string): Promise<CryptoKey> {
   );
 }
 
-document.addEventListener("nav", async () => {
+// Global cleanup reference for mutation observers
+let activeTitleObserver: MutationObserver | null = null;
+
+// Sets up a MutationObserver on <title> to prevent Quartz SPA router/hydration from overwriting the title
+function setupTitleObserver(newTitle: string) {
+  // Clear any existing observer first
+  if (activeTitleObserver) {
+    activeTitleObserver.disconnect();
+    activeTitleObserver = null;
+  }
+
+  document.title = newTitle;
+
+  const titleEl = document.querySelector("title");
+  if (titleEl) {
+    activeTitleObserver = new MutationObserver(() => {
+      if (document.title !== newTitle) {
+        document.title = newTitle;
+      }
+    });
+    activeTitleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    
+    window.addCleanup(() => {
+      if (activeTitleObserver) {
+        activeTitleObserver.disconnect();
+        activeTitleObserver = null;
+      }
+    });
+  }
+}
+
+// Controls visibility of locked navigation elements and empty parent directories
+function updateSidebarVisibility() {
+  const isUnlocked = !!sessionStorage.getItem("archive_session_key");
+  const links = document.querySelectorAll("a");
+
+  // 1. Mark files matching '/locked/' folder path
+  links.forEach(link => {
+    const href = link.getAttribute("href") || "";
+    // Match root /locked or subfiles like /locked/note, relative path ./locked/, etc.
+    const isLockedLink = href.includes("/locked/") || href === "/locked" || href.endsWith("/locked");
+    
+    if (isLockedLink) {
+      const itemToHide = link.closest("li") || link;
+      if (isUnlocked) {
+        itemToHide.classList.remove("locked-nav-hidden");
+        itemToHide.classList.add("locked-nav-visible");
+      } else {
+        itemToHide.classList.add("locked-nav-hidden");
+        itemToHide.classList.remove("locked-nav-visible");
+      }
+    }
+  });
+
+  // 2. Hide Empty Folders recursively bottom-up to prevent "Ghost" parent explorer nodes
+  const folderElements = document.querySelectorAll(".explorer-ul li");
+  for (let i = folderElements.length - 1; i >= 0; i--) {
+    const li = folderElements[i];
+    const folderOuter = li.querySelector(".folder-outer");
+    if (folderOuter) {
+      const childLis = folderOuter.querySelectorAll("ul.content > li");
+      if (childLis.length > 0) {
+        const allChildrenHidden = Array.from(childLis).every(child => child.classList.contains("locked-nav-hidden"));
+        if (allChildrenHidden) {
+          li.classList.add("locked-nav-hidden");
+          li.classList.remove("locked-nav-visible");
+        } else {
+          if (isUnlocked) {
+            li.classList.remove("locked-nav-hidden");
+            li.classList.add("locked-nav-visible");
+          }
+        }
+      }
+    }
+  }
+}
+
+async function checkAndDecrypt() {
+  // Always update sidebar visibility state at the start of navigation event
+  updateSidebarVisibility();
+
   const gateContainer = document.getElementById("password-gate-container");
   const encryptedContainer = document.getElementById("encrypted-container");
 
@@ -72,11 +152,32 @@ document.addEventListener("nav", async () => {
 
   const tryDecrypt = async (key: CryptoKey): Promise<boolean> => {
     try {
-      const decryptedHtml = await decryptPayload(iv, combined, key);
-      encryptedContainer.innerHTML = decryptedHtml;
+      const decryptedText = await decryptPayload(iv, combined, key);
+      let html = "";
+      let title = "";
+
+      try {
+        const parsed = JSON.parse(decryptedText);
+        html = parsed.html;
+        title = parsed.title;
+      } catch (e) {
+        html = decryptedText;
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+        const h1 = temp.querySelector("h1");
+        if (h1) title = h1.textContent || "";
+      }
+
+      encryptedContainer.innerHTML = html;
+      
+      // Update page title and enforce it via observer to prevent race condition overwrite
+      if (title) {
+        setupTitleObserver(title);
+      }
+
       gateContainer.remove();
-      // Dispatch nav event again so other components (MathJax, syntax highlighting, popovers, etc.)
-      // bind listeners and format the decrypted HTML structure.
+
+      // Dispatch nav event so other components (mathjax, popovers, etc.) hydrate the decrypted DOM
       document.dispatchEvent(new CustomEvent("nav"));
       return true;
     } catch (e) {
@@ -84,7 +185,7 @@ document.addEventListener("nav", async () => {
     }
   };
 
-  // 1. Check if session has a saved key
+  // 1. Auto-decrypt if valid key in session storage
   const savedKeyBase64 = sessionStorage.getItem("archive_session_key");
   if (savedKeyBase64) {
     try {
@@ -100,7 +201,7 @@ document.addEventListener("nav", async () => {
     }
   }
 
-  // 2. Manual key entry submission flow
+  // 2. Setup manual submission triggers
   const inputEl = document.getElementById("password-gate-input") as HTMLInputElement;
   const submitBtn = document.getElementById("password-gate-submit-btn");
   const errorEl = document.getElementById("password-gate-error");
@@ -147,4 +248,13 @@ document.addEventListener("nav", async () => {
     submitBtn.removeEventListener("click", handleUnlock);
     inputEl.removeEventListener("keypress", keypressHandler);
   });
+}
+
+// DUAL-LIFECYCLE RUNTIME INTERCEPT
+// Pathway 1: Natively on direct execution (handling cold hard-reloads)
+checkAndDecrypt();
+
+// Pathway 2: Hooked into the SPA nav listener (handling page transitions and DOM morph updates)
+document.addEventListener("nav", () => {
+  checkAndDecrypt();
 });

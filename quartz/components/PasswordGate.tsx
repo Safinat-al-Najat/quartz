@@ -6,7 +6,7 @@ import script from "./scripts/passwordGate.inline"
 
 export default (() => {
   const PasswordGate: QuartzComponent = ({ fileData, displayClass }: QuartzComponentProps) => {
-    const isLocked = fileData.frontmatter?.locked === true
+    const isLocked = fileData.slug === "locked" || fileData.slug?.startsWith("locked/")
 
     if (!isLocked) {
       return null

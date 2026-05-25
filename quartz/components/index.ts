@@ -28,6 +28,7 @@ import Flex from "./Flex"
 import ConditionalRender from "./ConditionalRender"
 import Chatbot from "./Chatbot"
 import PasswordGate from "./PasswordGate"
+import Locked from "./Locked"
 
 export {
   ArticleTitle,
@@ -58,4 +59,5 @@ export {
   ImageZoom,
   Chatbot,
   PasswordGate,
+  Locked,
 }
