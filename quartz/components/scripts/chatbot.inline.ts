@@ -1,4 +1,5 @@
 import { ContentIndex, ContentDetails } from "../../plugins/emitters/contentIndex"
+import { FullSlug, resolveRelative, isAbsoluteURL } from "../../util/path"
 
 // Stop words to clean user question for keyword search matching
 const STOP_WORDS = new Set([
@@ -75,7 +76,130 @@ function extractContextChunks(question: string, data: ContentIndex) {
   }))
 }
 
-async function setupChatbot(container: HTMLElement, data: ContentIndex) {
+// Custom Stream-Safe Markdown Parsers
+function parseBold(text: string): string {
+  const parts = text.split("**")
+  let html = ""
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      html += parts[i]
+    } else {
+      // Automatically wrap unclosed trailing asterisks safely in strong tags
+      html += `<strong>${parts[i]}</strong>`
+    }
+  }
+  return html
+}
+
+function resolveMarkdownLink(href: string, currentSlug: FullSlug): string {
+  if (isAbsoluteURL(href) || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+    return href
+  }
+  let target = href
+  if (target.startsWith("/")) {
+    target = target.substring(1)
+  }
+  return resolveRelative(currentSlug, target as FullSlug)
+}
+
+function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
+  // Safe HTML escapes keeping UTF-8 special characters intact
+  let escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+
+  // Inline code: extract `code` spans first so their contents are protected
+  // from bold/link processing. Use a placeholder approach for stream safety.
+  const codeSpans: string[] = []
+  escaped = escaped.replace(/`([^`]+)`/g, (_match, code) => {
+    const idx = codeSpans.length
+    codeSpans.push(`<code>${code}</code>`)
+    return `\x00CODE${idx}\x00`
+  })
+
+  escaped = parseBold(escaped)
+
+  // Link parsing: convert [title](href)
+  const linkRegex = /\[([^\]]*?)\]\(([^)]*?)\)/g
+  escaped = escaped.replace(linkRegex, (_match, linkText, href) => {
+    const resolvedHref = resolveMarkdownLink(href, currentSlug)
+    return `<a href="${resolvedHref}">${linkText}</a>`
+  })
+
+  // Restore code spans from placeholders
+  for (let i = 0; i < codeSpans.length; i++) {
+    escaped = escaped.replace(`\x00CODE${i}\x00`, codeSpans[i])
+  }
+
+  return escaped
+}
+
+function parseMarkdownToHtml(markdown: string, currentSlug: FullSlug): string {
+  const normalized = markdown.replace(/\r\n/g, "\n")
+  const blocks = normalized.split(/\n\n+/)
+  let html = ""
+
+  for (const block of blocks) {
+    const trimmedBlock = block.trim()
+    if (!trimmedBlock) continue
+
+    // Heading detection: render ### / ## / # as bold paragraphs
+    // to keep DOM flat and stream-safe (no <h1>-<h6> nesting concerns)
+    const headingMatch = trimmedBlock.match(/^(#{1,3})\s+(.*)$/)
+    if (headingMatch) {
+      html += `<p><strong>${parseInlineMarkdown(headingMatch[2], currentSlug)}</strong></p>`
+      continue
+    }
+
+    const lines = block.split("\n")
+    const isList = lines.some((line) => /^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line))
+
+    if (isList) {
+      let listState: "none" | "ul" | "ol" = "none"
+      for (const line of lines) {
+        const ulMatch = line.match(/^\s*[-*]\s+(.*)$/)
+        const olMatch = line.match(/^\s*\d+\.\s+(.*)$/)
+
+        if (ulMatch) {
+          if (listState !== "ul") {
+            if (listState === "ol") html += "</ol>"
+            html += "<ul>"
+            listState = "ul"
+          }
+          html += `<li>${parseInlineMarkdown(ulMatch[1], currentSlug)}</li>`
+        } else if (olMatch) {
+          if (listState !== "ol") {
+            if (listState === "ul") html += "</ul>"
+            html += "<ol>"
+            listState = "ol"
+          }
+          html += `<li>${parseInlineMarkdown(olMatch[1], currentSlug)}</li>`
+        } else {
+          if (listState === "ul") {
+            html += "</ul>"
+            listState = "none"
+          } else if (listState === "ol") {
+            html += "</ol>"
+            listState = "none"
+          }
+          if (line.trim() !== "") {
+            html += `<p>${parseInlineMarkdown(line, currentSlug)}</p>`
+          }
+        }
+      }
+      if (listState === "ul") html += "</ul>"
+      if (listState === "ol") html += "</ol>"
+    } else {
+      const parsedLines = lines.map((line) => parseInlineMarkdown(line, currentSlug))
+      html += `<p>${parsedLines.join("<br>")}</p>`
+    }
+  }
+
+  return html
+}
+
+async function setupChatbot(container: HTMLElement, data: ContentIndex, currentSlug: FullSlug) {
   const toggleBtn = container.querySelector("#chatbot-toggle-btn") as HTMLButtonElement
   const closeBtn = container.querySelector("#chatbot-close-btn") as HTMLButtonElement
   const chatWindow = container.querySelector("#chatbot-window") as HTMLDivElement
@@ -153,9 +277,9 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
     // Render temporary typing indicator bubble
     const botBubble = document.createElement("div")
     botBubble.className = "chatbot-message chatbot-bot"
-    const textNode = document.createElement("p")
-    textNode.className = "chatbot-typing"
-    textNode.textContent = "..."
+    const textNode = document.createElement("div")
+    textNode.className = "chatbot-content"
+    textNode.innerHTML = '<p class="chatbot-typing">...</p>'
     botBubble.appendChild(textNode)
     messagesContainer.appendChild(botBubble)
     scrollMessagesToBottom()
@@ -170,15 +294,14 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
       })
 
       // Clean typing class and indicator
-      textNode.classList.remove("chatbot-typing")
-      textNode.textContent = ""
+      textNode.innerHTML = ""
 
       if (!response.ok) {
         if (response.status === 429) {
-          textNode.textContent = "Rate limit exceeded. Please wait a moment before trying again."
+          textNode.innerHTML = "<p>Rate limit exceeded. Please wait a moment before trying again.</p>"
           botBubble.className = "chatbot-message chatbot-error"
         } else {
-          textNode.textContent = `Error: Unable to fetch response (Status ${response.status}).`
+          textNode.innerHTML = `<p>Error: Unable to fetch response (Status ${response.status}).</p>`
           botBubble.className = "chatbot-message chatbot-error"
         }
         return
@@ -187,9 +310,10 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let sseBuffer = ""
+      let botResponseText = ""
 
       if (!reader) {
-        textNode.textContent = "Error: Stream reader not supported by browser response."
+        textNode.innerHTML = "<p>Error: Stream reader not supported by browser response.</p>"
         botBubble.className = "chatbot-message chatbot-error"
         return
       }
@@ -214,7 +338,8 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
               const parsed = JSON.parse(dataStr)
               const deltaContent = parsed.choices?.[0]?.delta?.content
               if (deltaContent) {
-                textNode.textContent += deltaContent
+                botResponseText += deltaContent
+                textNode.innerHTML = parseMarkdownToHtml(botResponseText, currentSlug)
                 scrollMessagesToBottom()
               }
             } catch {
@@ -225,7 +350,7 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
       }
 
     } catch (err: any) {
-      textNode.textContent = `Connection Error: ${err.message || err}.`
+      textNode.innerHTML = `<p>Connection Error: ${err.message || err}.</p>`
       botBubble.className = "chatbot-message chatbot-error"
     } finally {
       inputField.disabled = false
@@ -241,9 +366,10 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex) {
 
 // Quartz SPA nav hook
 document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
+  const currentSlug = e.detail.url
   const data = await fetchData
   const chatbotElement = document.getElementById("quartz-chatbot")
   if (chatbotElement) {
-    await setupChatbot(chatbotElement, data)
+    await setupChatbot(chatbotElement, data, currentSlug)
   }
 })
