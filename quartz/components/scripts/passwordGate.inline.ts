@@ -89,23 +89,17 @@ function setupTitleObserver(newTitle: string) {
 // Controls visibility of locked navigation elements and empty parent directories
 function updateSidebarVisibility() {
   const isUnlocked = !!sessionStorage.getItem("archive_session_key");
-  const links = document.querySelectorAll("a");
+  const links = document.querySelectorAll(".sidebar a[href*='locked'], .explorer a[href*='locked'], .backlinks a[href*='locked'], .recent-notes a[href*='locked']");
 
-  // 1. Mark files matching '/locked/' folder path
+  // 1. Mark files matching 'locked' folder path
   links.forEach(link => {
-    const href = link.getAttribute("href") || "";
-    // Match root /locked or subfiles like /locked/note, relative path ./locked/, etc.
-    const isLockedLink = href.includes("/locked/") || href === "/locked" || href.endsWith("/locked");
-    
-    if (isLockedLink) {
-      const itemToHide = link.closest("li") || link;
-      if (isUnlocked) {
-        itemToHide.classList.remove("locked-nav-hidden");
-        itemToHide.classList.add("locked-nav-visible");
-      } else {
-        itemToHide.classList.add("locked-nav-hidden");
-        itemToHide.classList.remove("locked-nav-visible");
-      }
+    const itemToHide = link.closest("li") || link;
+    if (isUnlocked) {
+      itemToHide.classList.remove("locked-nav-hidden");
+      itemToHide.classList.add("locked-nav-visible");
+    } else {
+      itemToHide.classList.add("locked-nav-hidden");
+      itemToHide.classList.remove("locked-nav-visible");
     }
   });
 
@@ -135,6 +129,12 @@ function updateSidebarVisibility() {
 async function checkAndDecrypt() {
   // Always update sidebar visibility state at the start of navigation event
   updateSidebarVisibility();
+
+  // Exit early ONLY if completely outside the locked directory tree
+  const currentPath = window.location.pathname;
+  if (!currentPath.includes("/locked")) {
+    return;
+  }
 
   const gateContainer = document.getElementById("password-gate-container");
   const encryptedContainer = document.getElementById("encrypted-container");
