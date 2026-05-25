@@ -57,8 +57,31 @@ async function importKeyFromBase64(base64Key: string): Promise<CryptoKey> {
   ])
 }
 
+/**
+ * Verify the session key against the verification token embedded in the gate container.
+ * Returns the CryptoKey if valid, null otherwise.
+ */
+async function verifySessionKey(
+  savedKeyBase64: string,
+  verifyToken: string,
+): Promise<CryptoKey | null> {
+  try {
+    const cryptoKey = await importKeyFromBase64(savedKeyBase64)
+    const parts = verifyToken.split(":")
+    if (parts.length !== 2) return null
+    const iv = base64ToBytes(parts[0])
+    const combined = base64ToBytes(parts[1])
+    const decrypted = await decryptPayload(iv, combined, cryptoKey)
+    if (decrypted === "archive-unlocked") {
+      return cryptoKey
+    }
+    return null
+  } catch (e) {
+    return null
+  }
+}
+
 // Global cleanup reference for mutation observers
-let activeTitleObserver: MutationObserver | null = null
 let activeTitleDecryptionObserver: MutationObserver | null = null
 
 // Decrypts/strips title metadata dynamically in the DOM
@@ -70,13 +93,14 @@ function setupTitleDecryptionObserver(key?: CryptoKey) {
 
   const scanAndDecrypt = () => {
     const elements = document.querySelectorAll(
-      "a, title, h1, h2, h3, h4, h5, h6, .card-title, .result-item, .note-title, .card-description",
+      "a, title, h1, h2, h3, h4, h5, h6, .card-title, .result-item, .note-title, .card-description, .article-title",
     )
     elements.forEach((el) => {
       el.childNodes.forEach((child) => {
         if (child.nodeType === Node.TEXT_NODE) {
           const text = child.nodeValue || ""
-          const match = text.match(/🔒 Locked Content \[(.+?):(.+?)\]/)
+          // Robust regex that handles full base64 character set (A-Za-z0-9+/=)
+          const match = text.match(/🔒 Locked Content \[([A-Za-z0-9+/=]+):([A-Za-z0-9+/=]+)\]/)
           if (match) {
             if (key) {
               const iv = base64ToBytes(match[1])
@@ -126,34 +150,6 @@ function setupTitleDecryptionObserver(key?: CryptoKey) {
   })
 }
 
-// Sets up a MutationObserver on <title> to prevent Quartz SPA router/hydration from overwriting the title
-function setupTitleObserver(newTitle: string) {
-  // Clear any existing observer first
-  if (activeTitleObserver) {
-    activeTitleObserver.disconnect()
-    activeTitleObserver = null
-  }
-
-  document.title = newTitle
-
-  const titleEl = document.querySelector("title")
-  if (titleEl) {
-    activeTitleObserver = new MutationObserver(() => {
-      if (document.title !== newTitle) {
-        document.title = newTitle
-      }
-    })
-    activeTitleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true })
-
-    window.addCleanup(() => {
-      if (activeTitleObserver) {
-        activeTitleObserver.disconnect()
-        activeTitleObserver = null
-      }
-    })
-  }
-}
-
 // Controls visibility of locked navigation elements and empty parent directories
 function updateSidebarVisibility() {
   const isUnlocked = !!sessionStorage.getItem("archive_session_key")
@@ -198,99 +194,146 @@ function updateSidebarVisibility() {
   }
 }
 
+/**
+ * Decrypt the encrypted container's payload and replace the DOM.
+ * Returns true on success, false on failure.
+ * Does NOT clear the session key on failure — the caller decides.
+ */
+async function decryptAndReveal(
+  encryptedContainer: HTMLElement,
+  gateContainer: HTMLElement,
+  key: CryptoKey,
+): Promise<boolean> {
+  const payload = encryptedContainer.getAttribute("data-payload")
+  if (!payload) return false
+
+  const parts = payload.split(":")
+  if (parts.length !== 2) return false
+
+  const iv = base64ToBytes(parts[0])
+  const combined = base64ToBytes(parts[1])
+
+  try {
+    const decryptedText = await decryptPayload(iv, combined, key)
+    let html = ""
+    let title = ""
+
+    try {
+      const parsed = JSON.parse(decryptedText)
+      html = parsed.html
+      title = parsed.title
+    } catch (e) {
+      html = decryptedText
+      const temp = document.createElement("div")
+      temp.innerHTML = html
+      const h1 = temp.querySelector("h1")
+      if (h1) title = h1.textContent || ""
+    }
+
+    encryptedContainer.innerHTML = html
+
+    // Update the article title in the beforeBody zone (h1.article-title)
+    if (title) {
+      const articleTitle = document.querySelector("h1.article-title")
+      if (articleTitle) {
+        articleTitle.textContent = title
+      }
+      document.title = title
+    }
+
+    gateContainer.remove()
+
+    // Explicitly unhide all locked navigation links and folders
+    updateSidebarVisibility()
+
+    return true
+  } catch (e) {
+    console.error("[VAULT] Decryption failed:", e)
+    return false
+  }
+}
+
 async function checkAndDecrypt() {
   // Always update sidebar visibility state at the start of navigation event
   updateSidebarVisibility()
 
+  // Get verification token from any gate container on the page (or from a cached source)
+  const gateContainer = document.getElementById("password-gate-container")
+  const verifyToken = gateContainer?.getAttribute("data-verify") || ""
+
   // Initialize title decryption observer based on session key state
   const savedKeyBase64 = sessionStorage.getItem("archive_session_key")
-  if (savedKeyBase64) {
+  if (savedKeyBase64 && verifyToken) {
+    // Verify the key is valid before using it for title decryption
+    const verifiedKey = await verifySessionKey(savedKeyBase64, verifyToken)
+    if (verifiedKey) {
+      setupTitleDecryptionObserver(verifiedKey)
+    } else {
+      // Key is invalid — clear it
+      sessionStorage.removeItem("archive_session_key")
+      setupTitleDecryptionObserver(undefined)
+    }
+  } else if (savedKeyBase64) {
+    // We have a key but no verification token on this page — still try to use it for titles
     try {
       const cryptoKey = await importKeyFromBase64(savedKeyBase64)
       setupTitleDecryptionObserver(cryptoKey)
     } catch (e) {
-      console.error("[VAULT] Error importing key from session storage:", e)
       setupTitleDecryptionObserver(undefined)
     }
   } else {
     setupTitleDecryptionObserver(undefined)
   }
 
-  // Exit early ONLY if completely outside the locked directory tree
+  // Exit early if completely outside the locked directory tree
   const currentPath = window.location.pathname
   if (!currentPath.includes("/locked")) {
     return
   }
 
-  const gateContainer = document.getElementById("password-gate-container")
   const encryptedContainer = document.getElementById("encrypted-container")
 
   if (!gateContainer || !encryptedContainer) return
 
-  const payload = encryptedContainer.getAttribute("data-payload")
-  if (!payload) return
-
-  const parts = payload.split(":")
-  if (parts.length !== 2) return
-
-  const iv = base64ToBytes(parts[0])
-  const combined = base64ToBytes(parts[1])
-
-  const tryDecrypt = async (key: CryptoKey): Promise<boolean> => {
-    try {
-      const decryptedText = await decryptPayload(iv, combined, key)
-      let html = ""
-      let title = ""
-
-      try {
-        const parsed = JSON.parse(decryptedText)
-        html = parsed.html
-        title = parsed.title
-      } catch (e) {
-        html = decryptedText
-        const temp = document.createElement("div")
-        temp.innerHTML = html
-        const h1 = temp.querySelector("h1")
-        if (h1) title = h1.textContent || ""
-      }
-
-      encryptedContainer.innerHTML = html
-
-      // Update page title and enforce it via observer to prevent race condition overwrite
-      if (title) {
-        setupTitleObserver(title)
-      }
-
-      gateContainer.remove()
-
-      // Explicitly unhide all locked navigation links and folders
-      updateSidebarVisibility()
-
-      // Dispatch nav event so other components (mathjax, popovers, etc.) hydrate the decrypted DOM
-      document.dispatchEvent(new CustomEvent("nav") as any)
-      return true
-    } catch (e) {
-      console.error("[VAULT] Decryption failed:", e)
-      return false
-    }
-  }
-
-  // 1. Auto-decrypt if valid key in session storage
-  if (savedKeyBase64) {
-    try {
-      const cryptoKey = await importKeyFromBase64(savedKeyBase64)
-      const success = await tryDecrypt(cryptoKey)
-      if (success) {
-        return
+  // ──────────────────────────────────────────────────────
+  // FAST PATH: Auto-decrypt using verified session key
+  // ──────────────────────────────────────────────────────
+  const currentSavedKey = sessionStorage.getItem("archive_session_key")
+  if (currentSavedKey) {
+    // First verify the key is still valid using the verification token
+    if (verifyToken) {
+      const verifiedKey = await verifySessionKey(currentSavedKey, verifyToken)
+      if (verifiedKey) {
+        // Key is verified — decrypt the page content
+        const success = await decryptAndReveal(encryptedContainer, gateContainer, verifiedKey)
+        if (success) {
+          return // All done — no password prompt needed
+        }
+        // Payload decryption failed but key is verified — don't clear the key
+        // This can happen if a single file's encryption is corrupted
+        console.warn("[VAULT] Payload decryption failed despite valid key. Showing gate.")
       } else {
+        // Verification failed — the key is invalid, clear it
         sessionStorage.removeItem("archive_session_key")
       }
-    } catch (e) {
-      sessionStorage.removeItem("archive_session_key")
+    } else {
+      // No verification token available, try direct decryption
+      try {
+        const cryptoKey = await importKeyFromBase64(currentSavedKey)
+        const success = await decryptAndReveal(encryptedContainer, gateContainer, cryptoKey)
+        if (success) {
+          return
+        }
+        sessionStorage.removeItem("archive_session_key")
+      } catch (e) {
+        sessionStorage.removeItem("archive_session_key")
+      }
     }
   }
 
-  // 2. Setup manual submission triggers
+  // ──────────────────────────────────────────────────────
+  // MANUAL PATH: Show the password gate for user input
+  // ──────────────────────────────────────────────────────
   const inputEl = document.getElementById("password-gate-input") as HTMLInputElement
   const submitBtn = document.getElementById("password-gate-submit-btn")
   const errorEl = document.getElementById("password-gate-error")
@@ -307,11 +350,40 @@ async function checkAndDecrypt() {
 
     try {
       const { cryptoKey, base64Key } = await deriveKeyFromPassword(password)
+
+      // Verify the key against the verification token first
+      if (verifyToken) {
+        const parts = verifyToken.split(":")
+        if (parts.length === 2) {
+          const iv = base64ToBytes(parts[0])
+          const combined = base64ToBytes(parts[1])
+          try {
+            const result = await decryptPayload(iv, combined, cryptoKey)
+            if (result !== "archive-unlocked") {
+              throw new Error("Verification mismatch")
+            }
+          } catch (e) {
+            errorEl.textContent = "Incorrect password. Please try again."
+            setTimeout(() => {
+              modalContent.classList.add("shake")
+            }, 10)
+            return
+          }
+        }
+      }
+
+      // Password verified — store the key in session
       sessionStorage.setItem("archive_session_key", base64Key)
-      const success = await tryDecrypt(cryptoKey)
-      if (!success) {
+
+      const success = await decryptAndReveal(encryptedContainer, gateContainer, cryptoKey)
+      if (success) {
+        // Set up title decryption observer now that we have a valid key
+        setupTitleDecryptionObserver(cryptoKey)
+        // Update sidebar visibility
+        updateSidebarVisibility()
+      } else {
         sessionStorage.removeItem("archive_session_key")
-        errorEl.textContent = "Incorrect password. Please try again."
+        errorEl.textContent = "Decryption error occurred."
         setTimeout(() => {
           modalContent.classList.add("shake")
         }, 10)
