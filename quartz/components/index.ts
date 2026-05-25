@@ -27,6 +27,7 @@ import Comments from "./Comments"
 import Flex from "./Flex"
 import ConditionalRender from "./ConditionalRender"
 import Chatbot from "./Chatbot"
+import PasswordGate from "./PasswordGate"
 
 export {
   ArticleTitle,
@@ -56,4 +57,5 @@ export {
   ConditionalRender,
   ImageZoom,
   Chatbot,
+  PasswordGate,
 }

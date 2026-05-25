@@ -10,6 +10,7 @@ export const sharedPageComponents: SharedLayout = {
     Component.Chatbot({
       proxyUrl: "https://safinat-chatbot-proxy.safinat-research.workers.dev/api/chat",
     }),
+    Component.PasswordGate(),
   ],
   footer: Component.Footer({
     links: {

@@ -67,7 +67,9 @@ jobs:
         run: npm ci --force
 
       - name: Build Quartz
-        run: npx quartz build
+        env:
+          ARCHIVE_PASSWORD: ${{ secrets.ARCHIVE_PASSWORD }}
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
