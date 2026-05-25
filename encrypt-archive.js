@@ -11,6 +11,71 @@ import { toHtml } from "hast-util-to-html"
 const CONTENT_DIR = path.resolve("content")
 const LOCKED_DIR = path.join(CONTENT_DIR, "locked")
 const BACKUP_DIR = path.resolve(".quartz-cache/backups")
+const OBSIDIAN_IMAGE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".bmp",
+  ".svg",
+  ".webp",
+])
+
+function escapeHtmlAttribute(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+}
+
+function parseObsidianImageAlias(alias = "") {
+  const trimmed = alias.trim()
+  if (!trimmed) return { alt: "", width: "", height: "" }
+
+  const dimensionOnlyMatch = trimmed.match(/^(\d+)(?:x(\d+))?$/)
+  if (dimensionOnlyMatch) {
+    const [, width = "", height = ""] = dimensionOnlyMatch
+    return { alt: "", width, height }
+  }
+
+  const dimensionWithAltMatch = trimmed.match(/^(.*?)\|(\d+)(?:x(\d+))?$/)
+  if (!dimensionWithAltMatch) {
+    return { alt: trimmed, width: "", height: "" }
+  }
+
+  const [, rawAlt = "", width = "", height = ""] = dimensionWithAltMatch
+  return { alt: rawAlt.trim(), width, height }
+}
+
+function encodeAssetPath(assetPath) {
+  return assetPath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/")
+}
+
+export function transformObsidianImageEmbeds(markdown) {
+  return markdown.replace(
+    /!\[\[([^\]\|\#]+)(?:#[^\]\|]+)?(?:\|([^\]]*))?\]\]/g,
+    (match, rawPath, rawAlias) => {
+      const assetPath = rawPath.trim()
+      const ext = path.extname(assetPath).toLowerCase()
+      if (!OBSIDIAN_IMAGE_EXTENSIONS.has(ext)) return match
+
+      const { alt, width, height } = parseObsidianImageAlias(rawAlias)
+      const attrs = [
+        `src="${escapeHtmlAttribute(encodeAssetPath(assetPath))}"`,
+        `alt="${escapeHtmlAttribute(alt)}"`,
+      ]
+
+      if (width) attrs.push(`width="${escapeHtmlAttribute(width)}"`)
+      if (height) attrs.push(`height="${escapeHtmlAttribute(height)}"`)
+
+      return `<img ${attrs.join(" ")} />`
+    },
+  )
+}
 
 // Helper to recursively find files matching an extension
 function getFiles(dir, ext, fileList = []) {
@@ -46,6 +111,7 @@ function removeEmptyDirs(dir) {
 
 // Compile Markdown body to HTML
 async function compileMarkdown(body) {
+  body = transformObsidianImageEmbeds(body)
   const processor = unified().use(remarkParse).use(remarkRehype, { allowDangerousHtml: true })
   const mdAst = processor.parse(body)
   const htmlAst = await processor.run(mdAst)
@@ -259,7 +325,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("Build-time pipeline error:", err)
-  process.exit(1)
-})
+if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
+  main().catch((err) => {
+    console.error("Build-time pipeline error:", err)
+    process.exit(1)
+  })
+}
