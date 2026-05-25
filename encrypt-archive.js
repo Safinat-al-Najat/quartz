@@ -149,6 +149,19 @@ async function encryptAll() {
   }
 
   const key = deriveKey(password)
+
+  // Generate and save build-time verification token for dynamic validation on any locked page (including folder pages)
+  const verificationFile = path.resolve(".quartz-cache/verification.json")
+  const verificationText = "archive-unlocked"
+  const verificationEncrypted = encrypt(verificationText, key)
+  const verificationToken = `${verificationEncrypted.ivBase64}:${verificationEncrypted.payloadBase64}`
+
+  const cacheDir = path.dirname(verificationFile)
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true })
+  }
+  fs.writeFileSync(verificationFile, JSON.stringify({ verification: verificationToken }), "utf8")
+
   const mdFiles = getFiles(LOCKED_DIR, ".md")
   let encryptCount = 0
 
@@ -172,16 +185,15 @@ async function encryptAll() {
 
     // 2. Compile Markdown body to HTML
     const htmlContent = await compileMarkdown(body)
-    // Wrap real title inside an <h1> tag at the top of the HTML content
     const realTitle = data.title || path.basename(mdFp, ".md")
-    const htmlWithHeader = `<h1>${realTitle}</h1>\n\n${htmlContent}`
 
     // 3. Prepare JSON payload package
     // Pack original title and frontmatter along with the compiled HTML
+    // Do NOT prepend duplicate H1 title here - Quartz's ArticleTitle component is naturally rendered and decrypted.
     const payload = {
       title: realTitle,
       frontmatter: data,
-      html: htmlWithHeader,
+      html: htmlContent,
     }
 
     // 4. Encrypt JSON payload

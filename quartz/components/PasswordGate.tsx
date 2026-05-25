@@ -3,6 +3,8 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 import style from "./styles/passwordGate.scss"
 // @ts-ignore
 import script from "./scripts/passwordGate.inline"
+import fs from "fs"
+import path from "path"
 
 export default (() => {
   const PasswordGate: QuartzComponent = ({ fileData, displayClass }: QuartzComponentProps) => {
@@ -12,8 +14,24 @@ export default (() => {
       return null
     }
 
+    const verificationPath = path.resolve(".quartz-cache/verification.json")
+    let verificationToken = ""
+    if (fs.existsSync(verificationPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(verificationPath, "utf8"))
+        verificationToken = data.verification || ""
+      } catch (e) {
+        console.error("Error reading verification token:", e)
+      }
+    }
+
     return (
-      <div id="password-gate-container" class={displayClass} data-slug={fileData.slug}>
+      <div
+        id="password-gate-container"
+        class={displayClass}
+        data-slug={fileData.slug}
+        data-verify={verificationToken}
+      >
         <div id="password-gate-modal" class="password-gate-modal">
           <div class="password-gate-content">
             <span class="password-gate-arabic">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ</span>

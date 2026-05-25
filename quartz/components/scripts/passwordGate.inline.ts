@@ -84,6 +84,35 @@ async function verifySessionKey(
 // Global cleanup reference for mutation observers
 let activeTitleDecryptionObserver: MutationObserver | null = null
 
+function removeGate(gateContainer?: HTMLElement | null) {
+  gateContainer?.remove()
+}
+
+function normalizeTitleText(text?: string | null): string {
+  return (text ?? "").trim().replace(/\s+/g, " ").toLowerCase()
+}
+
+function prepareDecryptedHtml(html: string, title: string): string {
+  const temp = document.createElement("div")
+  temp.innerHTML = html
+
+  const articleTitle = document.querySelector("h1.article-title")
+  const firstElement = Array.from(temp.children).find((child) => child instanceof HTMLElement) as
+    | HTMLElement
+    | undefined
+
+  if (articleTitle && firstElement?.tagName.toLowerCase() === "h1") {
+    const payloadTitle = normalizeTitleText(firstElement.textContent)
+    const quartzTitle = normalizeTitleText(title || articleTitle.textContent)
+
+    if (!quartzTitle || payloadTitle === quartzTitle || payloadTitle.length > 0) {
+      firstElement.remove()
+    }
+  }
+
+  return temp.innerHTML
+}
+
 // Decrypts/strips title metadata dynamically in the DOM
 function setupTitleDecryptionObserver(key?: CryptoKey) {
   if (activeTitleDecryptionObserver) {
@@ -230,8 +259,6 @@ async function decryptAndReveal(
       if (h1) title = h1.textContent || ""
     }
 
-    encryptedContainer.innerHTML = html
-
     // Update the article title in the beforeBody zone (h1.article-title)
     if (title) {
       const articleTitle = document.querySelector("h1.article-title")
@@ -241,7 +268,8 @@ async function decryptAndReveal(
       document.title = title
     }
 
-    gateContainer.remove()
+    encryptedContainer.innerHTML = prepareDecryptedHtml(html, title)
+    removeGate(gateContainer)
 
     // Explicitly unhide all locked navigation links and folders
     updateSidebarVisibility()
@@ -293,7 +321,7 @@ async function checkAndDecrypt() {
 
   const encryptedContainer = document.getElementById("encrypted-container")
 
-  if (!gateContainer || !encryptedContainer) return
+  if (!gateContainer) return
 
   // ──────────────────────────────────────────────────────
   // FAST PATH: Auto-decrypt using verified session key
@@ -304,6 +332,12 @@ async function checkAndDecrypt() {
     if (verifyToken) {
       const verifiedKey = await verifySessionKey(currentSavedKey, verifyToken)
       if (verifiedKey) {
+        if (!encryptedContainer) {
+          removeGate(gateContainer)
+          updateSidebarVisibility()
+          return
+        }
+
         // Key is verified — decrypt the page content
         const success = await decryptAndReveal(encryptedContainer, gateContainer, verifiedKey)
         if (success) {
@@ -320,6 +354,12 @@ async function checkAndDecrypt() {
       // No verification token available, try direct decryption
       try {
         const cryptoKey = await importKeyFromBase64(currentSavedKey)
+        if (!encryptedContainer) {
+          removeGate(gateContainer)
+          updateSidebarVisibility()
+          return
+        }
+
         const success = await decryptAndReveal(encryptedContainer, gateContainer, cryptoKey)
         if (success) {
           return
@@ -340,6 +380,15 @@ async function checkAndDecrypt() {
   const modalContent = gateContainer.querySelector(".password-gate-content")
 
   if (!inputEl || !submitBtn || !errorEl || !modalContent) return
+
+  if (!encryptedContainer) {
+    errorEl.textContent = "Protected content is unavailable. Please rebuild the site."
+    inputEl.disabled = true
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = true
+    }
+    return
+  }
 
   const handleUnlock = async () => {
     const password = inputEl.value
