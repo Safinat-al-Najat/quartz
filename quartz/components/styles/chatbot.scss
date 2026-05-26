@@ -302,6 +302,7 @@
           border-radius: 8px;
           border: 1px solid rgba(var(--gray-rgb), 0.25);
           object-fit: contain;
+          cursor: zoom-in;
         }
 
         pre {
@@ -326,6 +327,48 @@
       border: 1px solid rgba(250, 82, 82, 0.2);
       border-radius: 16px 16px 16px 0px;
       font-size: 0.9rem;
+    }
+  }
+
+  .chatbot-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    cursor: zoom-out;
+
+    img {
+      max-width: min(96vw, 1200px);
+      max-height: 92vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+      cursor: zoom-out;
+    }
+  }
+
+  .chatbot-lightbox-close {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.28);
     }
   }
 

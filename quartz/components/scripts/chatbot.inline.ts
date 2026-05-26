@@ -86,6 +86,56 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
     scrollMessagesToBottom()
   }
 
+  const closeLightbox = () => {
+    container.querySelector(".chatbot-lightbox")?.remove()
+  }
+
+  const openLightbox = (image: HTMLImageElement) => {
+    closeLightbox()
+
+    const overlay = document.createElement("div")
+    overlay.className = "chatbot-lightbox"
+    overlay.setAttribute("role", "dialog")
+    overlay.setAttribute("aria-modal", "true")
+    overlay.setAttribute("aria-label", image.alt || "Expanded chat image")
+
+    const closeButton = document.createElement("button")
+    closeButton.className = "chatbot-lightbox-close"
+    closeButton.type = "button"
+    closeButton.setAttribute("aria-label", "Close expanded image")
+    closeButton.textContent = "×"
+
+    const expandedImage = document.createElement("img")
+    expandedImage.src = image.currentSrc || image.src
+    expandedImage.alt = image.alt || ""
+
+    overlay.append(closeButton, expandedImage)
+    container.appendChild(overlay)
+  }
+
+  const onMessagesClick = (event: MouseEvent) => {
+    const image = (event.target as Element | null)?.closest(".chatbot-content img")
+    if (image instanceof HTMLImageElement) {
+      openLightbox(image)
+    }
+  }
+
+  const onLightboxClick = (event: MouseEvent) => {
+    const target = event.target as Element | null
+    if (
+      target?.closest(".chatbot-lightbox-close") ||
+      target?.classList.contains("chatbot-lightbox")
+    ) {
+      closeLightbox()
+    }
+  }
+
+  const onLightboxKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      closeLightbox()
+    }
+  }
+
   toggleBtn.addEventListener("click", openChat)
   addCleanup(() => toggleBtn.removeEventListener("click", openChat))
 
@@ -94,6 +144,16 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
 
   closeBtn.addEventListener("click", closeChat)
   addCleanup(() => closeBtn.removeEventListener("click", closeChat))
+
+  messagesContainer.addEventListener("click", onMessagesClick)
+  addCleanup(() => messagesContainer.removeEventListener("click", onMessagesClick))
+
+  container.addEventListener("click", onLightboxClick)
+  addCleanup(() => container.removeEventListener("click", onLightboxClick))
+
+  document.addEventListener("keydown", onLightboxKeydown)
+  addCleanup(() => document.removeEventListener("keydown", onLightboxKeydown))
+  addCleanup(closeLightbox)
 
   const renderStoredMessage = (message: ChatbotStoredMessage) => {
     const bubble = document.createElement("div")
