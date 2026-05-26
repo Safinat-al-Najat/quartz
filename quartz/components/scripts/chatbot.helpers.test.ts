@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { extractContextChunks, parseMarkdownToHtml } from "./chatbot.helpers"
+import { extractContextChunks, parseMarkdownToHtml, shouldAttachImages } from "./chatbot.helpers"
 
 test("extractContextChunks tolerates minor spelling mismatches", () => {
   const index = {
@@ -48,12 +48,27 @@ test("extractContextChunks includes markdown and wikilink images from matched no
     },
   } as any
 
-  const chunks = extractContextChunks("show badr map", index)
+  const chunks = extractContextChunks("show badr map", index, "index" as any)
 
   assert.deepEqual(chunks[0]?.images, [
-    { alt: "Battle map", url: "../images/badr-map.png" },
-    { alt: "Ali portrait", url: "../portraits/ali.webp" },
+    { alt: "Battle map", url: "history/images/badr-map.png" },
+    { alt: "Ali portrait", url: "portraits/ali.webp" },
   ])
+})
+
+test("extractContextChunks includes image metadata from the content index", () => {
+  const index = {
+    "hadith/cloak": {
+      title: "Hadith E Kisa",
+      content: "Hadith under the cloak with the Prophet, Fatima, Hasan, Husayn, and Ali.",
+      images: [{ alt: "Hadith E Kisa", url: "../images/kisa.png" }],
+      tags: ["hadith"],
+    },
+  } as any
+
+  const chunks = extractContextChunks("show hadith kisa image", index, "index" as any)
+
+  assert.deepEqual(chunks[0]?.images, [{ alt: "Hadith E Kisa", url: "images/kisa.png" }])
 })
 
 test("parseMarkdownToHtml renders markdown images as safe image elements", () => {
@@ -63,4 +78,21 @@ test("parseMarkdownToHtml renders markdown images as safe image elements", () =>
   )
 
   assert.match(html, /<img src="..\/images\/badr-map.png" alt="Battle map" loading="lazy">/)
+})
+
+test("parseMarkdownToHtml strips model-invented images when allowed image URLs are provided", () => {
+  const html = parseMarkdownToHtml(
+    "Here is one:\n\n![Made up image](missing.png)\n\n![Allowed](real.png)",
+    "index" as any,
+    new Set(["real.png"]),
+  )
+
+  assert.doesNotMatch(html, /missing\.png/)
+  assert.match(html, /<img src="real.png" alt="Allowed" loading="lazy">/)
+})
+
+test("shouldAttachImages detects image requests without requiring exact wording", () => {
+  assert.equal(shouldAttachImages("paste any hadith image from this site"), true)
+  assert.equal(shouldAttachImages("an image of a hadith"), true)
+  assert.equal(shouldAttachImages("tell me about a hadith"), false)
 })

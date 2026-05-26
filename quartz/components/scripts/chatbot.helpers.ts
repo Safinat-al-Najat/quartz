@@ -213,21 +213,68 @@ function getExtension(path: string): string {
   return match?.[0] ?? ""
 }
 
+function normalizePathSegments(path: string): string {
+  const segments: string[] = []
+  for (const segment of path.split("/")) {
+    if (!segment || segment === ".") continue
+    if (segment === "..") {
+      segments.pop()
+    } else {
+      segments.push(segment)
+    }
+  }
+  return segments.join("/")
+}
+
+function relativeAssetUrl(currentSlug: FullSlug, targetAssetPath: string): string {
+  if (isAbsoluteURL(targetAssetPath) || targetAssetPath.startsWith("/")) return targetAssetPath
+
+  const currentDir = currentSlug.split("/").filter(Boolean).slice(0, -1)
+  const targetSegments = normalizePathSegments(targetAssetPath).split("/").filter(Boolean)
+  let common = 0
+
+  while (
+    common < currentDir.length &&
+    common < targetSegments.length &&
+    currentDir[common] === targetSegments[common]
+  ) {
+    common++
+  }
+
+  const up = Array(currentDir.length - common).fill("..")
+  const down = targetSegments.slice(common)
+  const result = [...up, ...down].join("/")
+  return result || "."
+}
+
 function escapeHtmlAttribute(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
 }
 
-function resolveImageUrl(url: string, sourceSlug: FullSlug): string {
-  return resolveMarkdownLink(url, sourceSlug)
+function resolveMarkdownImageUrl(url: string, sourceSlug: FullSlug, currentSlug: FullSlug): string {
+  if (isAbsoluteURL(url) || url.startsWith("/")) return url
+
+  const sourceDir = sourceSlug.split("/").filter(Boolean).slice(0, -1).join("/")
+  const target = normalizePathSegments(sourceDir ? `${sourceDir}/${url}` : url)
+  return relativeAssetUrl(currentSlug, target)
 }
 
-function extractImages(content: string, sourceSlug: FullSlug): { alt: string; url: string }[] {
+function resolveWikilinkImageUrl(url: string, currentSlug: FullSlug): string {
+  if (isAbsoluteURL(url) || url.startsWith("/")) return url
+  return relativeAssetUrl(currentSlug, normalizePathSegments(url))
+}
+
+function extractImages(
+  content: string,
+  sourceSlug: FullSlug,
+  currentSlug: FullSlug,
+): { alt: string; url: string }[] {
   const images: { alt: string; url: string }[] = []
   const seen = new Set<string>()
-  const addImage = (alt: string, rawUrl: string) => {
+  const addImage = (alt: string, rawUrl: string, resolver: (url: string) => string) => {
     const cleanUrl = rawUrl.trim()
     if (!cleanUrl || !IMAGE_EXTENSIONS.has(getExtension(cleanUrl))) return
-    const url = resolveImageUrl(cleanUrl, sourceSlug)
+    const url = resolver(cleanUrl)
     const key = `${alt}\x00${url}`
     if (!seen.has(key)) {
       seen.add(key)
@@ -236,7 +283,7 @@ function extractImages(content: string, sourceSlug: FullSlug): { alt: string; ur
   }
 
   content.replace(/!\[([^\]]*?)\]\(([^)]*?)\)/g, (_match, alt, url) => {
-    addImage(alt, url)
+    addImage(alt, url, (cleanUrl) => resolveMarkdownImageUrl(cleanUrl, sourceSlug, currentSlug))
     return _match
   })
 
@@ -245,7 +292,7 @@ function extractImages(content: string, sourceSlug: FullSlug): { alt: string; ur
     (_match, rawUrl, rawAlias) => {
       const alias = (rawAlias || "").trim()
       const alt = alias.replace(/^\d+x?\d*$/, "").trim() || rawUrl.split("/").pop() || "Image"
-      addImage(alt, rawUrl)
+      addImage(alt, rawUrl, (cleanUrl) => resolveWikilinkImageUrl(cleanUrl, currentSlug))
       return _match
     },
   )
@@ -253,7 +300,55 @@ function extractImages(content: string, sourceSlug: FullSlug): { alt: string; ur
   return images
 }
 
-export function extractContextChunks(question: string, data: ContentIndex) {
+function normalizeIndexedImages(
+  images: { alt?: string; url?: string }[] | undefined,
+  sourceSlug: FullSlug,
+  currentSlug: FullSlug,
+): { alt: string; url: string }[] {
+  const normalized: { alt: string; url: string }[] = []
+  const seen = new Set<string>()
+
+  for (const image of images ?? []) {
+    const rawUrl = image.url?.trim()
+    if (!rawUrl || !IMAGE_EXTENSIONS.has(getExtension(rawUrl))) continue
+    const url = resolveMarkdownImageUrl(rawUrl, sourceSlug, currentSlug)
+    const alt = image.alt?.trim() || rawUrl.split("/").pop() || "Image"
+    const key = `${alt}\x00${url}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      normalized.push({ alt, url })
+    }
+  }
+
+  return normalized
+}
+
+function mergeImages(
+  ...imageLists: { alt: string; url: string }[][]
+): { alt: string; url: string }[] {
+  const images: { alt: string; url: string }[] = []
+  const seen = new Set<string>()
+
+  for (const imageList of imageLists) {
+    for (const image of imageList) {
+      const key = `${image.alt}\x00${image.url}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        images.push(image)
+      }
+    }
+  }
+
+  return images
+}
+
+export function shouldAttachImages(question: string): boolean {
+  return /\b(image|images|img|picture|pictures|photo|photos|screenshot|show|paste)\b/i.test(
+    question,
+  )
+}
+
+export function extractContextChunks(question: string, data: ContentIndex, currentSlug?: FullSlug) {
   const keywords = tokenize(question)
   if (keywords.length === 0) return []
 
@@ -298,12 +393,19 @@ export function extractContextChunks(question: string, data: ContentIndex) {
 
   scoredEntries.sort((a, b) => b.score - a.score)
 
-  return scoredEntries.slice(0, 5).map((entry) => ({
-    title: entry.details.title || entry.slug,
-    slug: entry.slug,
-    content: entry.details.content || "",
-    images: extractImages(entry.details.content || "", entry.slug as FullSlug),
-  }))
+  return scoredEntries.slice(0, 5).map((entry) => {
+    const sourceSlug = entry.slug as FullSlug
+    const pageSlug = currentSlug ?? sourceSlug
+    return {
+      title: entry.details.title || entry.slug,
+      slug: entry.slug,
+      content: entry.details.content || "",
+      images: mergeImages(
+        normalizeIndexedImages(entry.details.images, sourceSlug, pageSlug),
+        extractImages(entry.details.content || "", sourceSlug, pageSlug),
+      ),
+    }
+  })
 }
 
 function resolveMarkdownLink(href: string, currentSlug: FullSlug): string {
@@ -322,7 +424,11 @@ function resolveMarkdownLink(href: string, currentSlug: FullSlug): string {
   return resolveRelative(currentSlug, target as FullSlug)
 }
 
-function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
+function parseInlineMarkdown(
+  text: string,
+  currentSlug: FullSlug,
+  allowedImageUrls?: Set<string>,
+): string {
   let escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
   const codeSpans: string[] = []
@@ -336,6 +442,7 @@ function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
     const safeHref = escapeHtmlAttribute(href.trim())
     const safeAlt = escapeHtmlAttribute(alt.trim())
     if (!safeHref || !IMAGE_EXTENSIONS.has(getExtension(safeHref))) return ""
+    if (allowedImageUrls && !allowedImageUrls.has(href.trim())) return ""
     return `<img src="${safeHref}" alt="${safeAlt}" loading="lazy">`
   })
 
@@ -353,7 +460,11 @@ function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
   return escaped
 }
 
-export function parseMarkdownToHtml(markdown: string, currentSlug: FullSlug): string {
+export function parseMarkdownToHtml(
+  markdown: string,
+  currentSlug: FullSlug,
+  allowedImageUrls?: Set<string>,
+): string {
   const normalized = markdown.replace(/\r\n/g, "\n")
   const blocks = normalized.split(/\n\n+/)
   let html = ""
@@ -364,7 +475,11 @@ export function parseMarkdownToHtml(markdown: string, currentSlug: FullSlug): st
 
     const headingMatch = trimmedBlock.match(/^(#{1,3})\s+(.*)$/)
     if (headingMatch) {
-      html += `<p><strong>${parseInlineMarkdown(headingMatch[2], currentSlug)}</strong></p>`
+      html += `<p><strong>${parseInlineMarkdown(
+        headingMatch[2],
+        currentSlug,
+        allowedImageUrls,
+      )}</strong></p>`
       continue
     }
 
@@ -383,14 +498,14 @@ export function parseMarkdownToHtml(markdown: string, currentSlug: FullSlug): st
             html += "<ul>"
             listState = "ul"
           }
-          html += `<li>${parseInlineMarkdown(ulMatch[1], currentSlug)}</li>`
+          html += `<li>${parseInlineMarkdown(ulMatch[1], currentSlug, allowedImageUrls)}</li>`
         } else if (olMatch) {
           if (listState !== "ol") {
             if (listState === "ul") html += "</ul>"
             html += "<ol>"
             listState = "ol"
           }
-          html += `<li>${parseInlineMarkdown(olMatch[1], currentSlug)}</li>`
+          html += `<li>${parseInlineMarkdown(olMatch[1], currentSlug, allowedImageUrls)}</li>`
         } else {
           if (listState === "ul") {
             html += "</ul>"
@@ -400,14 +515,16 @@ export function parseMarkdownToHtml(markdown: string, currentSlug: FullSlug): st
             listState = "none"
           }
           if (line.trim() !== "") {
-            html += `<p>${parseInlineMarkdown(line, currentSlug)}</p>`
+            html += `<p>${parseInlineMarkdown(line, currentSlug, allowedImageUrls)}</p>`
           }
         }
       }
       if (listState === "ul") html += "</ul>"
       if (listState === "ol") html += "</ol>"
     } else {
-      const parsedLines = lines.map((line) => parseInlineMarkdown(line, currentSlug))
+      const parsedLines = lines.map((line) =>
+        parseInlineMarkdown(line, currentSlug, allowedImageUrls),
+      )
       html += `<p>${parsedLines.join("<br>")}</p>`
     }
   }

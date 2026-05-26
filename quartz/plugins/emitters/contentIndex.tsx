@@ -16,9 +16,36 @@ export type ContentDetails = {
   links: SimpleSlug[]
   tags: string[]
   content: string
+  images?: { alt: string; url: string }[]
   richContent?: string
   date?: Date
   description?: string
+}
+
+function extractImages(tree: Root): { alt: string; url: string }[] {
+  const images: { alt: string; url: string }[] = []
+  const seen = new Set<string>()
+
+  const visit = (node: any) => {
+    if (node?.type === "element" && node.tagName === "img") {
+      const url = typeof node.properties?.src === "string" ? node.properties.src : ""
+      if (url) {
+        const alt = typeof node.properties?.alt === "string" ? node.properties.alt : ""
+        const key = `${alt}\x00${url}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          images.push({ alt, url })
+        }
+      }
+    }
+
+    if (Array.isArray(node?.children)) {
+      for (const child of node.children) visit(child)
+    }
+  }
+
+  visit(tree)
+  return images
 }
 
 interface Options {
@@ -110,6 +137,7 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
             links: file.data.links ?? [],
             tags: file.data.frontmatter?.tags ?? [],
             content: file.data.text ?? "",
+            images: extractImages(tree as Root),
             richContent: opts?.rssFullHtml
               ? escapeHTML(toHtml(tree as Root, { allowDangerousHtml: true }))
               : undefined,

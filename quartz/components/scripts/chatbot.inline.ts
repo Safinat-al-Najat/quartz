@@ -1,5 +1,16 @@
 import { FullSlug } from "../../util/path"
-import { extractContextChunks, parseMarkdownToHtml } from "./chatbot.helpers"
+import { extractContextChunks, parseMarkdownToHtml, shouldAttachImages } from "./chatbot.helpers"
+
+type ChatbotStoredMessage =
+  | { sender: "user" | "system" | "error"; text: string }
+  | { sender: "bot"; html: string }
+
+declare global {
+  interface Window {
+    __quartzChatbotMessages?: ChatbotStoredMessage[]
+    __quartzChatbotExpanded?: boolean
+  }
+}
 
 if (typeof window.addCleanup !== "function") {
   window.addCleanup = () => {}
@@ -7,6 +18,7 @@ if (typeof window.addCleanup !== "function") {
 
 async function setupChatbot(container: HTMLElement, data: ContentIndex, currentSlug: FullSlug) {
   const toggleBtn = container.querySelector("#chatbot-toggle-btn") as HTMLButtonElement
+  const sizeBtn = container.querySelector("#chatbot-size-btn") as HTMLButtonElement
   const closeBtn = container.querySelector("#chatbot-close-btn") as HTMLButtonElement
   const chatWindow = container.querySelector("#chatbot-window") as HTMLDivElement
   const messagesContainer = container.querySelector("#chatbot-messages") as HTMLDivElement
@@ -16,6 +28,7 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
 
   if (
     !toggleBtn ||
+    !sizeBtn ||
     !closeBtn ||
     !chatWindow ||
     !messagesContainer ||
@@ -29,6 +42,14 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
   const proxyUrl =
     container.dataset.proxyUrl || "https://safinat-chatbot-proxy.workers.dev/api/chat"
   const addCleanup = typeof window.addCleanup === "function" ? window.addCleanup : () => {}
+  window.__quartzChatbotMessages ??= []
+  window.__quartzChatbotExpanded ??= false
+
+  if (window.__quartzChatbotExpanded) {
+    container.classList.add("chatbot-expanded")
+    sizeBtn.setAttribute("aria-label", "Shrink Chatbot")
+    sizeBtn.setAttribute("title", "Shrink")
+  }
 
   // Restore toggle state
   const isChatOpen = sessionStorage.getItem("chatbot-open") === "true"
@@ -52,25 +73,62 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
     sessionStorage.setItem("chatbot-open", "false")
   }
 
-  toggleBtn.addEventListener("click", openChat)
-  addCleanup(() => toggleBtn.removeEventListener("click", openChat))
-
-  closeBtn.addEventListener("click", closeChat)
-  addCleanup(() => closeBtn.removeEventListener("click", closeChat))
-
   const scrollMessagesToBottom = () => {
     messagesContainer.scrollTop = messagesContainer.scrollHeight
   }
 
-  const addMessage = (text: string, sender: "user" | "bot" | "error" | "system") => {
+  const toggleSize = () => {
+    const expanded = !container.classList.contains("chatbot-expanded")
+    container.classList.toggle("chatbot-expanded", expanded)
+    window.__quartzChatbotExpanded = expanded
+    sizeBtn.setAttribute("aria-label", expanded ? "Shrink Chatbot" : "Expand Chatbot")
+    sizeBtn.setAttribute("title", expanded ? "Shrink" : "Expand")
+    scrollMessagesToBottom()
+  }
+
+  toggleBtn.addEventListener("click", openChat)
+  addCleanup(() => toggleBtn.removeEventListener("click", openChat))
+
+  sizeBtn.addEventListener("click", toggleSize)
+  addCleanup(() => sizeBtn.removeEventListener("click", toggleSize))
+
+  closeBtn.addEventListener("click", closeChat)
+  addCleanup(() => closeBtn.removeEventListener("click", closeChat))
+
+  const renderStoredMessage = (message: ChatbotStoredMessage) => {
     const bubble = document.createElement("div")
-    bubble.className = `chatbot-message chatbot-${sender}`
-    const p = document.createElement("p")
-    p.textContent = text
-    bubble.appendChild(p)
+    bubble.className = `chatbot-message chatbot-${message.sender}`
+    if (message.sender === "bot") {
+      const content = document.createElement("div")
+      content.className = "chatbot-content"
+      content.innerHTML = message.html
+      bubble.appendChild(content)
+    } else {
+      const p = document.createElement("p")
+      p.textContent = message.text
+      bubble.appendChild(p)
+    }
     messagesContainer.appendChild(bubble)
     scrollMessagesToBottom()
     return bubble
+  }
+
+  const rememberMessage = (message: ChatbotStoredMessage) => {
+    window.__quartzChatbotMessages ??= []
+    window.__quartzChatbotMessages.push(message)
+  }
+
+  const addMessage = (text: string, sender: "user" | "error" | "system") => {
+    const message = { sender, text } satisfies ChatbotStoredMessage
+    rememberMessage(message)
+    return renderStoredMessage(message)
+  }
+
+  if (window.__quartzChatbotMessages.length > 0) {
+    messagesContainer.innerHTML = ""
+    for (const message of window.__quartzChatbotMessages) {
+      renderStoredMessage(message)
+    }
   }
 
   // Submit Handler
@@ -88,7 +146,9 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
     addMessage(question, "user")
 
     // Retrieve matching context notes from local search index
-    const contextChunks = extractContextChunks(question, data)
+    const contextChunks = extractContextChunks(question, data, currentSlug)
+    const contextImages = contextChunks.flatMap((chunk) => chunk.images || [])
+    const allowedImageUrls = new Set(contextImages.map((image) => image.url))
 
     // Render temporary typing indicator bubble
     const botBubble = document.createElement("div")
@@ -128,6 +188,7 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
       const decoder = new TextDecoder()
       let sseBuffer = ""
       let botResponseText = ""
+      let finalBotHtml = ""
 
       if (!reader) {
         textNode.innerHTML = "<p>Error: Stream reader not supported by browser response.</p>"
@@ -156,7 +217,8 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
               const deltaContent = parsed.choices?.[0]?.delta?.content
               if (deltaContent) {
                 botResponseText += deltaContent
-                textNode.innerHTML = parseMarkdownToHtml(botResponseText, currentSlug)
+                finalBotHtml = parseMarkdownToHtml(botResponseText, currentSlug, allowedImageUrls)
+                textNode.innerHTML = finalBotHtml
                 scrollMessagesToBottom()
               }
             } catch {
@@ -165,9 +227,30 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
           }
         }
       }
+
+      if (shouldAttachImages(question) && contextImages.length > 0) {
+        const responseHasAllowedImage = contextImages.some((image) =>
+          botResponseText.includes(`](${image.url})`),
+        )
+        if (!responseHasAllowedImage) {
+          const imageMarkdown = contextImages
+            .slice(0, 3)
+            .map((image) => `![${image.alt || "Image"}](${image.url})`)
+            .join("\n\n")
+          botResponseText = `${botResponseText.trim()}\n\n${imageMarkdown}`.trim()
+          finalBotHtml = parseMarkdownToHtml(botResponseText, currentSlug, allowedImageUrls)
+          textNode.innerHTML = finalBotHtml
+          scrollMessagesToBottom()
+        }
+      }
+
+      if (finalBotHtml) {
+        rememberMessage({ sender: "bot", html: finalBotHtml })
+      }
     } catch (err: any) {
       textNode.innerHTML = `<p>Connection Error: ${err.message || err}.</p>`
       botBubble.className = "chatbot-message chatbot-error"
+      rememberMessage({ sender: "error", text: `Connection Error: ${err.message || err}.` })
     } finally {
       inputField.disabled = false
       submitBtn.disabled = false
