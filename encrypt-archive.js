@@ -244,10 +244,10 @@ function autoRestoreLeftovers() {
 
 // Load password
 function getMasterPassword() {
-  let password = process.env.ARCHIVE_PASSWORD
+  let password = ""
   const configPath = path.resolve("archive-config.json")
 
-  if (!password && fs.existsSync(configPath)) {
+  if (fs.existsSync(configPath)) {
     try {
       const config = JSON.parse(fs.readFileSync(configPath, "utf8"))
       password = config.password
@@ -255,6 +255,11 @@ function getMasterPassword() {
       console.error("Error parsing archive-config.json:", e)
     }
   }
+
+  if (!password) {
+    password = process.env.ARCHIVE_PASSWORD
+  }
+
   return password
 }
 

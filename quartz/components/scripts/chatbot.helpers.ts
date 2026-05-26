@@ -1,6 +1,8 @@
 import { ContentDetails } from "../../plugins/emitters/contentIndex"
 import { FullSlug, isAbsoluteURL, resolveRelative } from "../../util/path"
 
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg", ".webp"])
+
 const STOP_WORDS = new Set([
   "a",
   "about",
@@ -205,6 +207,52 @@ function fuzzyTokenCount(keyword: string, text: string): number {
   return matches
 }
 
+function getExtension(path: string): string {
+  const cleanPath = path.split(/[?#]/, 1)[0].toLowerCase()
+  const match = cleanPath.match(/\.[a-z0-9]+$/)
+  return match?.[0] ?? ""
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
+}
+
+function resolveImageUrl(url: string, sourceSlug: FullSlug): string {
+  return resolveMarkdownLink(url, sourceSlug)
+}
+
+function extractImages(content: string, sourceSlug: FullSlug): { alt: string; url: string }[] {
+  const images: { alt: string; url: string }[] = []
+  const seen = new Set<string>()
+  const addImage = (alt: string, rawUrl: string) => {
+    const cleanUrl = rawUrl.trim()
+    if (!cleanUrl || !IMAGE_EXTENSIONS.has(getExtension(cleanUrl))) return
+    const url = resolveImageUrl(cleanUrl, sourceSlug)
+    const key = `${alt}\x00${url}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      images.push({ alt: alt.trim(), url })
+    }
+  }
+
+  content.replace(/!\[([^\]]*?)\]\(([^)]*?)\)/g, (_match, alt, url) => {
+    addImage(alt, url)
+    return _match
+  })
+
+  content.replace(
+    /!\[\[([^\]\|#]+)(?:#[^\]\|]+)?(?:\|([^\]]*?))?\]\]/g,
+    (_match, rawUrl, rawAlias) => {
+      const alias = (rawAlias || "").trim()
+      const alt = alias.replace(/^\d+x?\d*$/, "").trim() || rawUrl.split("/").pop() || "Image"
+      addImage(alt, rawUrl)
+      return _match
+    },
+  )
+
+  return images
+}
+
 export function extractContextChunks(question: string, data: ContentIndex) {
   const keywords = tokenize(question)
   if (keywords.length === 0) return []
@@ -254,6 +302,7 @@ export function extractContextChunks(question: string, data: ContentIndex) {
     title: entry.details.title || entry.slug,
     slug: entry.slug,
     content: entry.details.content || "",
+    images: extractImages(entry.details.content || "", entry.slug as FullSlug),
   }))
 }
 
@@ -281,6 +330,13 @@ function parseInlineMarkdown(text: string, currentSlug: FullSlug): string {
     const idx = codeSpans.length
     codeSpans.push(`<code>${code}</code>`)
     return `\x00CODE${idx}\x00`
+  })
+
+  escaped = escaped.replace(/!\[([^\]]*?)\]\(([^)]*?)\)/g, (_match, alt, href) => {
+    const safeHref = escapeHtmlAttribute(href.trim())
+    const safeAlt = escapeHtmlAttribute(alt.trim())
+    if (!safeHref || !IMAGE_EXTENSIONS.has(getExtension(safeHref))) return ""
+    return `<img src="${safeHref}" alt="${safeAlt}" loading="lazy">`
   })
 
   escaped = escaped.replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>").replace(/\*\*/g, "")

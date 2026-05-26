@@ -34,3 +34,33 @@ test("parseMarkdownToHtml renders bold and removes unmatched bold markers", () =
   assert.doesNotMatch(html, /\*\*/)
   assert.match(html, /unfinished/)
 })
+
+test("extractContextChunks includes markdown and wikilink images from matched notes", () => {
+  const index = {
+    "history/badr": {
+      slug: "history/badr",
+      filePath: "history/badr.md",
+      title: "Battle of Badr",
+      links: [],
+      tags: ["history"],
+      content:
+        "Badr notes include a map.\n\n![Battle map](images/badr-map.png)\n\n![[portraits/ali.webp|Ali portrait]]",
+    },
+  } as any
+
+  const chunks = extractContextChunks("show badr map", index)
+
+  assert.deepEqual(chunks[0]?.images, [
+    { alt: "Battle map", url: "../images/badr-map.png" },
+    { alt: "Ali portrait", url: "../portraits/ali.webp" },
+  ])
+})
+
+test("parseMarkdownToHtml renders markdown images as safe image elements", () => {
+  const html = parseMarkdownToHtml(
+    "Here is the map:\n\n![Battle map](../images/badr-map.png)",
+    "history/badr" as any,
+  )
+
+  assert.match(html, /<img src="..\/images\/badr-map.png" alt="Battle map" loading="lazy">/)
+})
