@@ -3,7 +3,12 @@ import { extractContextChunks, parseMarkdownToHtml, shouldAttachImages } from ".
 
 type ChatbotStoredMessage =
   | { sender: "user" | "system" | "error"; text: string }
-  | { sender: "bot"; html: string }
+  | { sender: "bot"; html: string; text?: string }
+
+type ChatbotConversationTurn = {
+  role: "user" | "assistant"
+  content: string
+}
 
 declare global {
   interface Window {
@@ -178,6 +183,29 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
     window.__quartzChatbotMessages.push(message)
   }
 
+  const getRecentUserContext = (currentQuestion: string) => {
+    const priorUserMessages = (window.__quartzChatbotMessages ?? [])
+      .filter((message): message is { sender: "user"; text: string } => message.sender === "user")
+      .map((message) => message.text)
+      .slice(-4)
+
+    return [...priorUserMessages, currentQuestion].join("\n")
+  }
+
+  const getConversationHistory = (): ChatbotConversationTurn[] => {
+    return (window.__quartzChatbotMessages ?? [])
+      .flatMap((message): ChatbotConversationTurn[] => {
+        if (message.sender === "user") {
+          return [{ role: "user", content: message.text }]
+        }
+        if (message.sender === "bot" && message.text) {
+          return [{ role: "assistant", content: message.text }]
+        }
+        return []
+      })
+      .slice(-10)
+  }
+
   const addMessage = (text: string, sender: "user" | "error" | "system") => {
     const message = { sender, text } satisfies ChatbotStoredMessage
     rememberMessage(message)
@@ -206,9 +234,11 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
     addMessage(question, "user")
 
     // Retrieve matching context notes from local search index
-    const contextChunks = extractContextChunks(question, data, currentSlug)
+    const retrievalQuery = getRecentUserContext(question)
+    const contextChunks = extractContextChunks(retrievalQuery, data, currentSlug)
     const contextImages = contextChunks.flatMap((chunk) => chunk.images || [])
     const allowedImageUrls = new Set(contextImages.map((image) => image.url))
+    const conversationHistory = getConversationHistory()
 
     // Render temporary typing indicator bubble
     const botBubble = document.createElement("div")
@@ -226,7 +256,7 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question, contextChunks }),
+        body: JSON.stringify({ question, conversationHistory, contextChunks }),
       })
 
       // Clean typing class and indicator
@@ -305,7 +335,7 @@ async function setupChatbot(container: HTMLElement, data: ContentIndex, currentS
       }
 
       if (finalBotHtml) {
-        rememberMessage({ sender: "bot", html: finalBotHtml })
+        rememberMessage({ sender: "bot", html: finalBotHtml, text: botResponseText })
       }
     } catch (err: any) {
       textNode.innerHTML = `<p>Connection Error: ${err.message || err}.</p>`
