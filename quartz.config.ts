@@ -27,6 +27,7 @@ const config: QuartzConfig = {
       "public",
       ".quartz-cache",
       ".git",
+      "**/AGENTS.md",
     ],
     defaultDateType: "modified",
     theme: {
@@ -111,8 +112,6 @@ const config: QuartzConfig = {
           return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: "base" })
         },
       }),
-      Plugin.Assets(),
-      Plugin.Static(),
       Plugin.Assets(),
       Plugin.Static(),
       Plugin.Favicon(),

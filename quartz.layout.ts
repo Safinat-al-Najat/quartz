@@ -1,5 +1,6 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
+import { shouldShowInNewTopics } from "./quartz/util/recentNotes"
 
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
@@ -44,15 +45,7 @@ export const defaultContentPageLayout: PageLayout = {
         title: "New Topics",
         limit: 10,
         showTags: true,
-        filter: (f) => {
-          const created = f.dates?.created
-          if (!created) return false
-
-          const thirtyDaysAgo = new Date()
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 10)
-
-          return new Date(created) > thirtyDaysAgo
-        }, // ← ADDED COMMA HERE
+        filter: shouldShowInNewTopics,
         sort: (a, b) => {
           const dateA = a.dates?.modified || a.dates?.created || new Date(0)
           const dateB = b.dates?.modified || b.dates?.created || new Date(0)
