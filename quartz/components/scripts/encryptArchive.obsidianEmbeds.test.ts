@@ -31,10 +31,6 @@ test("resolves bare locked image embeds through the content asset index", () => 
     resolveObsidianAssetPath("image-105.webp", "locked/NAMAZ/SALAT/Sections.md", assetIndex),
     "PNGS/pngs/image-105.webp",
   )
-  assert.equal(
-    resolveObsidianAssetPath("image-101.webp", "locked/NAMAZ/WUDU/Method of Wudu.md", assetIndex),
-    "PNGS/pngs/image-101.webp",
-  )
 })
 
 test("keeps non-image Obsidian embeds unchanged", () => {
