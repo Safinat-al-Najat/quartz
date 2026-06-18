@@ -75,7 +75,7 @@ function pageRootPrefix(relativeMarkdownPath) {
   return parentDepth === 0 ? "." : Array(parentDepth).fill("..").join("/")
 }
 
-export function buildAssetIndex() {
+function buildAssetIndex() {
   const assets = new Map()
   const files = getFiles(CONTENT_DIR, "")
 
@@ -96,7 +96,7 @@ export function buildAssetIndex() {
   return assets
 }
 
-export function resolveObsidianAssetPath(assetPath, relativeMarkdownPath, assetIndex) {
+function resolveObsidianAssetPath(assetPath, relativeMarkdownPath, assetIndex) {
   const normalizedAssetPath = assetPath.replace(/\\/g, "/")
   const relativeDir = path.dirname(relativeMarkdownPath).replace(/\\/g, "/")
   const sameFolderCandidate = path
@@ -179,13 +179,6 @@ async function compileMarkdown(body, relativeMarkdownPath, assetIndex) {
 
   body = transformObsidianImageEmbeds(body, (assetPath) => {
     const resolved = resolveObsidianAssetPath(assetPath, relativeMarkdownPath, assetIndex)
-    if (!fs.existsSync(path.join(CONTENT_DIR, resolved))) {
-      throw new Error(
-        `Missing locked-page image asset "${assetPath}" referenced from "${relativeMarkdownPath}". ` +
-          `Add the file under content/ or fix the Obsidian embed before building.`,
-      )
-    }
-
     return path.posix.join(rootPrefix, slugifyAssetPath(resolved))
   })
 
