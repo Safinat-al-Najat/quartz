@@ -1,7 +1,10 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-// @ts-ignore build script is plain ESM JavaScript
-import { transformObsidianImageEmbeds } from "../../../encrypt-archive.js"
+import {
+  buildAssetIndex,
+  resolveObsidianAssetPath,
+  transformObsidianImageEmbeds,
+} from "../../../encrypt-archive.js"
 
 test("transforms Obsidian image embeds with dimensions into img tags", () => {
   const markdown = "Before ![[image-1018.webp|418x601]] after"
@@ -18,6 +21,15 @@ test("uses resolved asset paths for image embeds", () => {
   assert.equal(
     transformObsidianImageEmbeds(markdown, () => "../../PNGS/pngs/image-1018.webp"),
     '<img src="../../PNGS/pngs/image-1018.webp" alt="" width="418" height="601" />',
+  )
+})
+
+test("resolves bare locked image embeds through the content asset index", () => {
+  const assetIndex = buildAssetIndex()
+
+  assert.equal(
+    resolveObsidianAssetPath("image-105.webp", "locked/NAMAZ/SALAT/Sections.md", assetIndex),
+    "PNGS/pngs/image-105.webp",
   )
 })
 
