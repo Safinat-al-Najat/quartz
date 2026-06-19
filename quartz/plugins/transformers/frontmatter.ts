@@ -40,6 +40,10 @@ function coerceToArray(input: string | string[]): string[] | undefined {
     .map((tag: string | number) => tag.toString())
 }
 
+function isRecord(input: unknown): input is Record<string, any> {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+}
+
 function getAliasSlugs(aliases: string[]): FullSlug[] {
   const res: FullSlug[] = []
   for (const alias of aliases) {
@@ -63,13 +67,14 @@ export const FrontMatter: QuartzTransformerPlugin<Partial<Options>> = (userOpts)
         () => {
           return (_, file) => {
             const fileData = Buffer.from(file.value as Uint8Array)
-            const { data } = matter(fileData, {
+            const parsed = matter(fileData, {
               ...opts,
               engines: {
                 yaml: (s) => yaml.load(s, { schema: yaml.JSON_SCHEMA }) as object,
                 toml: (s) => toml.parse(s) as object,
               },
             })
+            const data = isRecord(parsed.data) ? parsed.data : {}
 
             if (data.title != null && data.title.toString() !== "") {
               data.title = data.title.toString()

@@ -12,6 +12,7 @@
 ## Local Contracts
 
 - Browser scripts must be safe across hard reloads and Quartz navigation events.
+- Markdown frontmatter parsing must tolerate non-object YAML/TOML results and fall back to file-derived defaults instead of crashing the build.
 - Locked-page runtime behavior must match the parent workspace contract at `architecture/locked-vault-security.md`.
 - Shared predicates used by layout/config should live in `util/` with focused tests.
 
